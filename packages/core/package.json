@@ -1,8 +1,15 @@
 {
   "name": "@toon-ui/core",
-  "version": "0.1.0-beta.1",
+  "version": "0.1.1-beta.1",
   "description": "Core parser, AST, validation, and protocol utilities for ToonUI.",
-  "keywords": ["toon-ui", "ai", "ui", "chat", "dsl", "parser"],
+  "keywords": [
+    "toon-ui",
+    "ai",
+    "ui",
+    "chat",
+    "dsl",
+    "parser"
+  ],
   "homepage": "https://github.com/jefferson-lopez/toon-ui#readme",
   "bugs": {
     "url": "https://github.com/jefferson-lopez/toon-ui/issues"

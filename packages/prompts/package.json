@@ -1,8 +1,14 @@
 {
   "name": "@toon-ui/prompts",
-  "version": "0.1.0-beta.1",
+  "version": "0.1.1-beta.1",
   "description": "Prompt helpers for teaching models to emit valid ToonUI.",
-  "keywords": ["toon-ui", "prompt", "ai", "llm", "ui"],
+  "keywords": [
+    "toon-ui",
+    "prompt",
+    "ai",
+    "llm",
+    "ui"
+  ],
   "homepage": "https://github.com/jefferson-lopez/toon-ui#readme",
   "bugs": {
     "url": "https://github.com/jefferson-lopez/toon-ui/issues"

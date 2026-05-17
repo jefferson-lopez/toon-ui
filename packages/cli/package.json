@@ -1,8 +1,14 @@
 {
   "name": "@toon-ui/cli",
-  "version": "0.1.0-beta.1",
+  "version": "0.1.1-beta.1",
   "description": "CLI utilities for validating and inspecting ToonUI files.",
-  "keywords": ["toon-ui", "cli", "ai", "ui", "validation"],
+  "keywords": [
+    "toon-ui",
+    "cli",
+    "ai",
+    "ui",
+    "validation"
+  ],
   "homepage": "https://github.com/jefferson-lopez/toon-ui#readme",
   "bugs": {
     "url": "https://github.com/jefferson-lopez/toon-ui/issues"

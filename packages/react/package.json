@@ -1,8 +1,14 @@
 {
   "name": "@toon-ui/react",
-  "version": "0.1.0-beta.1",
+  "version": "0.1.1-beta.1",
   "description": "React runtime and component registry for ToonUI.",
-  "keywords": ["toon-ui", "react", "ai", "chat", "ui"],
+  "keywords": [
+    "toon-ui",
+    "react",
+    "ai",
+    "chat",
+    "ui"
+  ],
   "homepage": "https://github.com/jefferson-lopez/toon-ui#readme",
   "bugs": {
     "url": "https://github.com/jefferson-lopez/toon-ui/issues"
