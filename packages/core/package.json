@@ -1,6 +1,6 @@
 {
   "name": "@toon-ui/core",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Core parser, AST, validation, and protocol utilities for ToonUI.",
   "keywords": [
     "toon-ui",
