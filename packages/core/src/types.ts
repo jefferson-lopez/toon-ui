@@ -175,12 +175,30 @@ export interface ToonChatMessage<TPayload extends ToonInteractionPayload = ToonI
   payload: TPayload;
 }
 
+export interface ToonChatUIMessageMetadata<TPayload extends ToonInteractionPayload = ToonInteractionPayload> {
+  displayContent: string;
+  kind: TPayload["kind"];
+}
+
+export interface ToonChatUIMessagePart {
+  type: "text";
+  text: string;
+}
+
+export interface ToonChatUIMessage<TPayload extends ToonInteractionPayload = ToonInteractionPayload> {
+  id: string;
+  role: "user";
+  parts: [ToonChatUIMessagePart];
+  metadata: ToonChatUIMessageMetadata<TPayload>;
+}
+
 export interface ToonProtocol {
   prompt: string;
   rules: ToonRules;
   formatSubmitMessage: typeof import('./runtime').formatSubmitMessage;
   formatReplyMessage: typeof import('./runtime').formatReplyMessage;
   createChatMessage: typeof import('./runtime').createChatMessage;
+  createChatUIMessage: typeof import('./runtime').createChatUIMessage;
 }
 
 export type ToonComponentRegistry = Partial<{ [K in keyof ToonNodeByType]: unknown }>;

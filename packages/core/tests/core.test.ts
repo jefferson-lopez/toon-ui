@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ToonSyntaxError, createChatMessage, createToonCoreRuntime, createToonProtocol, extractToonBlocks, formatReplyMessage, formatSubmitMessage, parseToonUI, validateToonUI } from '../src';
+import { ToonSyntaxError, createChatMessage, createChatUIMessage, createToonCoreRuntime, createToonProtocol, extractToonBlocks, formatReplyMessage, formatSubmitMessage, parseToonUI, validateToonUI } from '../src';
 
 describe('toon core', () => {
   it('extracts toon-ui blocks from markdown', () => {
@@ -126,6 +126,26 @@ describe('toon core', () => {
     });
   });
 
+  it('creates ui-message-shaped chat entries with metadata for frontend rendering', () => {
+    const reply = createChatUIMessage({
+      kind: 'ui_reply',
+      eventId: 'reply_123',
+      source: 'button',
+      component: 'button',
+      value: 'Sí, elimínalo',
+    });
+
+    expect(reply).toMatchObject({
+      id: 'reply_123',
+      role: 'user',
+      parts: [{ type: 'text', text: expect.stringContaining('ui_reply:') }],
+      metadata: {
+        displayContent: 'Sí, elimínalo',
+        kind: 'ui_reply',
+      },
+    });
+  });
+
   it('creates a runtime prompt and preserves the component registry', () => {
     const button = Symbol('button');
     const runtime = createToonCoreRuntime({
@@ -142,5 +162,12 @@ describe('toon core', () => {
       component: 'button',
       value: 'Crear producto',
     }).displayContent).toBe('Crear producto');
+    expect(runtime.createChatUIMessage({
+      kind: 'ui_reply',
+      eventId: 'reply_124',
+      source: 'button',
+      component: 'button',
+      value: 'Crear producto',
+    }).metadata.displayContent).toBe('Crear producto');
   });
 });

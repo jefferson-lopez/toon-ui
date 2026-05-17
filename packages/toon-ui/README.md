@@ -120,12 +120,14 @@ export function AssistantMessage({ content }: { content: string }) {
       content={content}
       runtime={toon}
       onReply={(payload) => {
-        const message = toon.createChatMessage(payload);
-        console.log(message.content);
+        const message = toon.createChatUIMessage(payload);
+        console.log(message.parts[0].text);
+        console.log(message.metadata.displayContent);
       }}
       onSubmit={(payload) => {
-        const message = toon.createChatMessage(payload);
-        console.log(message.content);
+        const message = toon.createChatUIMessage(payload);
+        console.log(message.parts[0].text);
+        console.log(message.metadata.displayContent);
       }}
     />
   );
@@ -416,30 +418,20 @@ export function AssistantChat() {
                 content={content}
                 runtime={toon}
                 onReply={(payload) => {
-                  const next = toon.createChatMessage(payload);
                   setMessages((current) => [
                     ...current,
-                    {
-                      id: crypto.randomUUID(),
-                      role: next.role,
-                      parts: [{ type: 'text', text: next.content }],
-                    },
+                    toon.createChatUIMessage(payload),
                   ]);
                 }}
                 onSubmit={(payload) => {
-                  const next = toon.createChatMessage(payload);
                   setMessages((current) => [
                     ...current,
-                    {
-                      id: crypto.randomUUID(),
-                      role: next.role,
-                      parts: [{ type: 'text', text: next.content }],
-                    },
+                    toon.createChatUIMessage(payload),
                   ]);
                 }}
               />
             ) : (
-              <pre>{content}</pre>
+              <pre>{message.metadata?.displayContent ?? content}</pre>
             )}
           </div>
         );

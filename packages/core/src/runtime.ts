@@ -2,7 +2,7 @@ import { createPrompt } from './prompts';
 import { parseToonUI } from './parser';
 import { validateToonUI } from './validator';
 import { extractToonBlocks } from './formatter';
-import { ALERT_VARIANTS, BADGE_VARIANTS, BUTTON_VARIANTS, FIELD_TYPES, OFFICIAL_COMPONENT_KEYS, type CreateToonUIOptions, type ReplyPayload, type SubmitPayload, type ToonChatMessage, type ToonComponentRegistry, type ToonInteractionPayload, type ToonProtocol, type ToonRules, type ToonRuntime } from './types';
+import { ALERT_VARIANTS, BADGE_VARIANTS, BUTTON_VARIANTS, FIELD_TYPES, OFFICIAL_COMPONENT_KEYS, type CreateToonUIOptions, type ReplyPayload, type SubmitPayload, type ToonChatMessage, type ToonChatUIMessage, type ToonComponentRegistry, type ToonInteractionPayload, type ToonProtocol, type ToonRules, type ToonRuntime } from './types';
 
 function createEventId(prefix: string): string {
   return `${prefix}_${Math.random().toString(36).slice(2, 10)}`;
@@ -81,6 +81,20 @@ export function createChatMessage<TPayload extends ToonInteractionPayload>(paylo
   };
 }
 
+export function createChatUIMessage<TPayload extends ToonInteractionPayload>(payload: TPayload): ToonChatUIMessage<TPayload> {
+  const message = createChatMessage(payload);
+
+  return {
+    id: payload.eventId,
+    role: message.role,
+    parts: [{ type: 'text', text: message.content }],
+    metadata: {
+      displayContent: message.displayContent,
+      kind: message.kind,
+    },
+  };
+}
+
 export function createToonProtocol(): ToonProtocol {
   const rules = createRules();
 
@@ -90,6 +104,7 @@ export function createToonProtocol(): ToonProtocol {
     formatSubmitMessage,
     formatReplyMessage,
     createChatMessage,
+    createChatUIMessage,
   };
 }
 

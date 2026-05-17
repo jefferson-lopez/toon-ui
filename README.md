@@ -156,30 +156,20 @@ export function AssistantChat() {
                 content={content}
                 runtime={toon}
                 onReply={(payload) => {
-                  const next = toon.createChatMessage(payload);
                   setMessages((current) => [
                     ...current,
-                    {
-                      id: crypto.randomUUID(),
-                      role: next.role,
-                      parts: [{ type: 'text', text: next.content }],
-                    },
+                    toon.createChatUIMessage(payload),
                   ]);
                 }}
                 onSubmit={(payload) => {
-                  const next = toon.createChatMessage(payload);
                   setMessages((current) => [
                     ...current,
-                    {
-                      id: crypto.randomUUID(),
-                      role: next.role,
-                      parts: [{ type: 'text', text: next.content }],
-                    },
+                    toon.createChatUIMessage(payload),
                   ]);
                 }}
               />
             ) : (
-              <pre>{content}</pre>
+              <pre>{message.metadata?.displayContent ?? content}</pre>
             )}
           </div>
         );
@@ -263,6 +253,7 @@ Sí, elimínalo
 - `formatReplyMessage()`
 - `formatSubmitMessage()`
 - `createChatMessage()`
+- `createChatUIMessage()`
 
 ### `@toon-ui/react`
 
@@ -313,7 +304,7 @@ pnpm --filter @examples/next-ai-sdk dev
 
 ---
 
-## Version 0.3.1
+## Version 0.3.2
 
 This release removes beta package versions and clarifies the public API:
 

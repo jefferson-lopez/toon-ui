@@ -30,6 +30,7 @@ pnpm add @toon-ui/core
 - `formatReplyMessage()`
 - `formatSubmitMessage()`
 - `createChatMessage()`
+- `createChatUIMessage()`
 - `createPrompt()`
 
 ---
@@ -146,6 +147,32 @@ const message = createChatMessage({
 
 console.log(message.content);
 console.log(message.displayContent);
+```
+
+### `createChatUIMessage()`
+
+Useful when your frontend uses `useChat`/`UIMessage`-style state and you need:
+
+- model-facing `content` in `parts`
+- human-facing `displayContent` in `metadata`
+
+```ts
+import { createChatUIMessage } from '@toon-ui/core';
+
+const message = createChatUIMessage({
+  kind: 'ui_submit',
+  eventId: 'submit_123',
+  source: 'form',
+  intent: 'agregar_cliente',
+  formTitle: 'Agregar cliente',
+  values: {
+    name: 'Jefferson Lopez Mendoza',
+    email: 'jeffersonlopezmendoza343@gmail.com',
+  },
+});
+
+console.log(message.parts[0].text); // model content
+console.log(message.metadata.displayContent); // human content
 ```
 
 ---

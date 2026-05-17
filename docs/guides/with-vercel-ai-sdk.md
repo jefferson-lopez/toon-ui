@@ -83,30 +83,20 @@ export function AssistantChat() {
                 content={content}
                 runtime={toon}
                 onReply={(payload) => {
-                  const next = toon.createChatMessage(payload);
                   setMessages((current) => [
                     ...current,
-                    {
-                      id: crypto.randomUUID(),
-                      role: next.role,
-                      parts: [{ type: 'text', text: next.content }],
-                    },
+                    toon.createChatUIMessage(payload),
                   ]);
                 }}
                 onSubmit={(payload) => {
-                  const next = toon.createChatMessage(payload);
                   setMessages((current) => [
                     ...current,
-                    {
-                      id: crypto.randomUUID(),
-                      role: next.role,
-                      parts: [{ type: 'text', text: next.content }],
-                    },
+                    toon.createChatUIMessage(payload),
                   ]);
                 }}
               />
             ) : (
-              <pre>{content}</pre>
+              <pre>{message.metadata?.displayContent ?? content}</pre>
             )}
           </div>
         );
@@ -146,6 +136,12 @@ ToonUI owns:
 - prompt rules
 - structured interaction payloads
 - rendering
+
+Important:
+
+- the model should receive `content`
+- the human should see `displayContent`
+- `createChatUIMessage()` helps preserve that split when using `useChat`
 
 Your app owns:
 

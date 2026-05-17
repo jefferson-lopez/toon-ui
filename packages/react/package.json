@@ -1,6 +1,6 @@
 {
   "name": "@toon-ui/react",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "React runtime and component registry for ToonUI.",
   "keywords": [
     "toon-ui",
@@ -39,7 +39,7 @@
     "lint": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@toon-ui/core": "workspace:0.3.1"
+    "@toon-ui/core": "workspace:0.3.2"
   },
   "peerDependencies": {
     "react": "^19.2.6"
