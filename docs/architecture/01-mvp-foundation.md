@@ -8,7 +8,7 @@ The MVP is now registry-first, not preset-first.
 
 - `@toon-ui/core` owns grammar, AST, validation, and protocol formatting.
 - `@toon-ui/react` walks the AST and resolves registered components by `node.type`.
-- `@toon-ui/shadcn` is only an optional preset.
+- `@toon-ui/toon-ui` injects `basicPreset()` by default and merges developer overrides on top, so missing components still render.
 - The component catalog is closed for the MVP.
 - `meta` is removed from the official grammar and runtime surface.
 
@@ -25,7 +25,6 @@ The MVP is now registry-first, not preset-first.
 
 - `@toon-ui/core`
 - `@toon-ui/react`
-- `@toon-ui/shadcn`
 - `@toon-ui/prompts`
 - `@toon-ui/cli`
-- `toon-ui`
+- `@toon-ui/toon-ui`

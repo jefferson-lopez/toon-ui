@@ -1,6 +1,5 @@
 import React, { useMemo, useState } from 'react';
 import { ToonMessage, createToonUI } from '@toon-ui/toon-ui';
-import { shadcnPreset } from '@toon-ui/toon-ui/presets/shadcn';
 
 const sample = [
   'Claro, encontré este producto.',
@@ -13,9 +12,7 @@ const sample = [
   '```',
 ].join('\n');
 
-const toon = createToonUI({
-  components: shadcnPreset(),
-});
+const toon = createToonUI();
 
 export default function App() {
   const [content, setContent] = useState(sample);

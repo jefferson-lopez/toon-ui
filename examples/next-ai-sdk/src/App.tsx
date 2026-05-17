@@ -1,12 +1,9 @@
 import React, { useMemo, useState } from 'react';
 import { ToonMessage, createToonUI } from '@toon-ui/toon-ui';
-import { shadcnPreset } from '@toon-ui/toon-ui/presets/shadcn';
 import type { ToonReplyPayload, ToonSubmitPayload } from '@toon-ui/toon-ui';
 import { createDisplaySubmitSummary, createHostMessage, simulateAssistantReply, type HostMessage } from './chat-loop';
 
-const toon = createToonUI({
-  components: shadcnPreset(),
-});
+const toon = createToonUI();
 
 const initialMessages: HostMessage[] = [
   createHostMessage('assistant', [

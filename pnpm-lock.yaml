@@ -95,15 +95,6 @@ importers:
         specifier: ^19.1.0
         version: 19.2.6
 
-  packages/shadcn:
-    dependencies:
-      '@toon-ui/react':
-        specifier: workspace:*
-        version: link:../react
-      react:
-        specifier: ^19.1.0
-        version: 19.2.6
-
   packages/toon-ui:
     dependencies:
       '@toon-ui/core':
@@ -112,9 +103,9 @@ importers:
       '@toon-ui/react':
         specifier: workspace:*
         version: link:../react
-      '@toon-ui/shadcn':
-        specifier: workspace:*
-        version: link:../shadcn
+      react:
+        specifier: ^19.1.0
+        version: 19.2.6
 
 packages:
 

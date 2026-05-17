@@ -1,9 +1,26 @@
 {
   "name": "@toon-ui/react",
-  "version": "0.1.0",
+  "version": "0.1.0-beta.1",
+  "description": "React runtime and component registry for ToonUI.",
+  "keywords": ["toon-ui", "react", "ai", "chat", "ui"],
+  "homepage": "https://github.com/jefferson-lopez/toon-ui#readme",
+  "bugs": {
+    "url": "https://github.com/jefferson-lopez/toon-ui/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jefferson-lopez/toon-ui.git",
+    "directory": "packages/react"
+  },
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -16,7 +33,9 @@
     "lint": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@toon-ui/core": "workspace:*",
+    "@toon-ui/core": "workspace:*"
+  },
+  "peerDependencies": {
     "react": "^19.1.0"
   }
 }

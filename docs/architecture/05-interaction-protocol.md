@@ -57,9 +57,7 @@ ui_submit:
 ## Host app composition example
 
 ```ts
-const toon = createToonUI({
-  components: shadcnPreset(),
-});
+const toon = createToonUI();
 
 const system = [
   toon.prompt,
