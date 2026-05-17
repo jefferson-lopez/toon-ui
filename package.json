@@ -1,0 +1,24 @@
+{
+  "name": "toon-ui-monorepo",
+  "private": true,
+  "version": "0.0.0",
+  "packageManager": "pnpm@10.0.0",
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev --parallel",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "typecheck": "turbo run typecheck"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "@types/react": "^19.1.4",
+    "@types/react-dom": "^19.1.4",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "turbo": "^2.0.14",
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.4",
+    "zod": "^3.23.8"
+  }
+}
