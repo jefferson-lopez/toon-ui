@@ -1,12 +1,20 @@
 # @toon-ui/prompts
 
-Prompt helpers for teaching models to emit valid ToonUI.
+`@toon-ui/prompts` exposes prompt helpers only.
 
-This package is useful if you want prompt-building utilities without pulling the full main entrypoint.
+Use it when you want to compose your own ToonUI system prompt without pulling a React runtime into the conversation.
 
 ---
 
-## What it includes
+## Install
+
+```bash
+pnpm add @toon-ui/core @toon-ui/prompts
+```
+
+---
+
+## Main exports
 
 - `createPrompt()`
 - `createComponentPrompt()`
@@ -15,36 +23,69 @@ This package is useful if you want prompt-building utilities without pulling the
 
 ---
 
-## Install
+## Server integration
 
-```bash
-pnpm add @toon-ui/prompts @toon-ui/core
-```
-
----
-
-## Example
+This is the main use case.
 
 ```ts
 import { createRules } from '@toon-ui/core';
-import { createPrompt } from '@toon-ui/prompts';
+import {
+  createPrompt,
+  createSafetyPrompt,
+} from '@toon-ui/prompts';
 
-const prompt = createPrompt(createRules());
+const rules = createRules();
 
-console.log(prompt);
+const system = [
+  createPrompt(rules),
+  '',
+  'Available tools:',
+  '- searchProducts(query)',
+  '- createProduct(name, price, stock)',
+  '',
+  createSafetyPrompt(),
+].join('\n');
+```
+
+If you want a simpler server abstraction, prefer:
+
+```ts
+import { createToonProtocol } from '@toon-ui/core';
 ```
 
 ---
 
-## When to use this package
+## Frontend integration
 
-Use it if you want to:
+This package does NOT render UI.
 
-- compose your own system prompts
-- reuse only the prompt layer
-- keep prompt generation separate from rendering
+Frontend pairing should be:
 
-If you want the most common setup, use:
+- server: `@toon-ui/prompts` or `@toon-ui/core`
+- client: `@toon-ui/react` or `@toon-ui/toon-ui`
 
-- `@toon-ui/toon-ui`
+```tsx
+import { createToonRuntime, ToonMessage } from '@toon-ui/toon-ui';
 
+const toon = createToonRuntime();
+
+export function AssistantMessage({ content }: { content: string }) {
+  return <ToonMessage content={content} runtime={toon} />;
+}
+```
+
+---
+
+## Boundary
+
+`@toon-ui/prompts` owns:
+
+- prompt text helpers
+
+It does NOT own:
+
+- parsing
+- validation
+- rendering
+- interactions
+- chat transport

@@ -1,322 +1,88 @@
 # ToonUI
 
-**ToonUI** es un runtime de UI semántica para apps AI-native.
+ToonUI lets an LLM answer with normal markdown plus compact `toon-ui` blocks, while your app keeps control of chat state, tools, persistence, and business logic.
 
-Permite que la IA responda con:
+## Quick path
 
-- texto normal
-- más bloques compactos ```` ```toon-ui ````
-
-sin generar React, HTML, CSS o JSON pesado de componentes.
+1. Use `@toon-ui/core` on the server with `createToonProtocol()`.
+2. Use `@toon-ui/toon-ui` on the client with `createToonRuntime()`.
+3. Render assistant messages with `ToonMessage`.
+4. Feed `toon.prompt` into your system prompt.
+5. Convert `onReply` / `onSubmit` payloads with `toon.createChatMessage(payload)`.
 
 ---
 
-## Get Started
+## Package map
 
-Si solo quieres entender cómo usar ToonUI, sigue este orden:
+| Package | Purpose | Server | Frontend |
+|---|---|---:|---:|
+| `@toon-ui/core` | Protocol, parser, AST, validation, chat payload helpers | ✅ | ✅ low-level |
+| `@toon-ui/react` | React renderer with your own component registry | with core | ✅ |
+| `@toon-ui/toon-ui` | Simplest public API with built-in preset | with core on server | ✅ |
+| `@toon-ui/prompts` | Prompt-building helpers only | ✅ | ⚠️ not a renderer |
+| `@toon-ui/cli` | Validation and AST inspection from terminal/CI | ✅ | ❌ |
 
-1. instala `@toon-ui/toon-ui`
-2. crea un runtime con `createToonUI()`
-3. renderiza mensajes del assistant con `ToonMessage`
-4. deja que ToonUI capture `reply` y `submit`
-5. envía esos eventos estructurados de vuelta al chat
+---
 
-La idea central es esta:
+## Recommended architecture
 
 ```txt
-ToonUI define QUÉ puede existir.
-El developer define CÓMO se ve.
-La IA decide CUÁNDO usarlo.
+Server
+  createToonProtocol()
+  -> toon.prompt
+  -> streamText()/Responses API/your SDK
+  -> tools stay in your app
+
+Client
+  createToonRuntime()
+  -> <ToonMessage />
+  -> onReply/onSubmit
+  -> toon.createChatMessage(payload)
+  -> back into your chat transport/state
 ```
+
+This boundary is intentional:
+
+- the server owns the model and tools
+- the client owns rendering and UX
+- ToonUI owns the UI protocol
 
 ---
 
-## Instalación
+## Install
 
-### Opción recomendada
+### Recommended
 
 ```bash
-pnpm add @toon-ui/toon-ui react
+pnpm add @toon-ui/core @toon-ui/toon-ui react react-dom
 ```
 
-### Opción low-level
-
-Si quieres controlar más piezas manualmente:
+### Advanced split packages
 
 ```bash
-pnpm add @toon-ui/core @toon-ui/react react
+pnpm add @toon-ui/core @toon-ui/react react react-dom
+```
+
+### Tooling only
+
+```bash
+pnpm add -D @toon-ui/cli
 ```
 
 ---
 
-## Uso mínimo
+## End-to-end integration
 
-Este es el arranque más simple:
+## 1) Server integration
 
-```tsx
-import { createToonUI, ToonMessage } from '@toon-ui/toon-ui';
-
-const toon = createToonUI();
-
-export function AssistantMessage({ content }: { content: string }) {
-  return <ToonMessage content={content} runtime={toon} />;
-}
-```
-
-### Importante
-
-`createToonUI()` ya inyecta un `basicPreset()` por defecto.
-
-Eso significa:
-
-- funciona con cero configuración
-- si defines solo algunos componentes propios, los que falten usan el preset básico
-
----
-
-## Override parcial de componentes
-
-```tsx
-const toon = createToonUI({
-  components: {
-    button: MyButton,
-    field: MyInput,
-  },
-});
-```
-
-En ese caso:
-
-- `button` y `field` salen de tu app
-- `card`, `alert`, `badge`, etc. siguen usando el preset básico
-
-Eso es intencional.  
-La librería debe arrancar rápido, pero el developer sigue teniendo el control real.
-
----
-
-## Cómo piensa ToonUI
-
-ToonUI NO es:
-
-- un framework de agentes
-- una capa de tool calling
-- un reemplazo de Vercel AI SDK
-- un backend orchestrator
-
-ToonUI SÍ es:
-
-- parser
-- AST tipado
-- validator
-- runtime React
-- component registry
-- formatter de `ui_reply` y `ui_submit`
-
-La app host sigue siendo dueña de:
-
-- `messages`
-- `streamText()` / `useChat()` / el SDK que uses
-- `tools`
-- backend
-- persistencia
-- UX final del chat
-
-ESA separación es la arquitectura correcta.
-
----
-
-## Flujo completo
-
-```txt
-Usuario escribe
-↓
-La IA responde markdown + toon-ui
-↓
-ToonUI extrae bloques
-↓
-ToonUI parsea y valida
-↓
-ToonUI renderiza con tus componentes
-↓
-El usuario interactúa
-↓
-ToonUI emite ui_reply / ui_submit
-↓
-Tu host app reinyecta eso al chat
-↓
-La IA decide si responde o llama una tool
-```
-
----
-
-## Ejemplo de sintaxis
-
-### Confirmación
-
-```toon
-confirm "¿Eliminar producto?":
-  text "Coca-Cola 400ml será eliminado."
-  button secondary "Cancelar" reply="Cancelar"
-  button danger "Sí, eliminar" reply="Sí, elimínalo"
-```
-
-### Formulario
-
-```toon
-form "Crear producto":
-  field name text "Nombre" required
-  field price number "Precio" required
-  field stock number "Stock" required
-  button primary "Crear producto" submit
-```
-
-### Card
-
-```toon
-card "Producto encontrado":
-  text "Coca-Cola 400ml"
-  badge "Activo" success
-  button secondary "Ver producto" reply="Ver producto"
-```
-
----
-
-## Catálogo oficial MVP
-
-Catálogo cerrado:
-
-- `text`
-- `card`
-- `form`
-- `field`
-- `button`
-- `confirm`
-- `list`
-- `item`
-- `badge`
-- `alert`
-- `table`
-
-La IA NO puede inventar componentes fuera de ese catálogo.
-
----
-
-## Cómo renderizar un mensaje del assistant
-
-Si tu modelo devuelve algo así:
-
-````md
-Claro, encontré este producto.
-
-```toon-ui
-card "Producto encontrado":
-  text "Coca-Cola 400ml"
-  badge "Activo" success
-```
-````
-
-Entonces:
-
-```tsx
-<ToonMessage content={message.content} runtime={toon} />
-```
-
-`ToonMessage` hace esto:
-
-- separa markdown y bloques `toon-ui`
-- parsea
-- valida
-- renderiza UI
-
----
-
-## Cómo funciona la interacción
-
-### Reply de botón
-
-Si la IA emite:
-
-```toon
-button danger "Sí, eliminar" reply="Sí, elimínalo"
-```
-
-ToonUI captura el click y tu host app puede serializarlo así:
-
-```txt
-ui_reply:
-  eventId: reply_xxxxxxxx
-  value: Sí, elimínalo
-  source: button
-  component: button
-```
-
-### Submit de formulario
-
-Si la IA emite:
-
-```toon
-form "Crear producto":
-  field name text "Nombre" required
-  field price number "Precio" required
-  button primary "Crear producto" submit
-```
-
-Tu host app puede serializarlo así:
-
-```txt
-ui_submit:
-  eventId: submit_xxxxxxxx
-  intent: create_product
-  formTitle: Crear producto
-  name: "Coca-Cola 400ml"
-  price: 2500
-```
-
----
-
-## Regla CRÍTICA: modelo vs humano
-
-No muestres al usuario el payload técnico crudo.
-
-Lo correcto es separar:
-
-- `content` → lo que recibe la IA
-- `displayContent` → lo que ve el humano
-
-Ejemplo:
-
-### Lo que recibe la IA
-
-```txt
-ui_reply:
-  eventId: reply_xxxxxxxx
-  value: Sí, elimínalo
-  source: button
-  component: button
-```
-
-### Lo que ve el usuario
-
-```txt
-Sí, elimínalo
-```
-
-Eso mismo aplica a `ui_submit`.
-
----
-
-## Integración con Vercel AI SDK
-
-La integración correcta NO es mezclar ToonUI con tools.
-
-La integración correcta es:
+Use `@toon-ui/core` on the server.
 
 ```ts
+import { createToonProtocol } from '@toon-ui/core';
 import { streamText } from 'ai';
-import { createToonUI } from '@toon-ui/toon-ui';
+import { openai } from '@ai-sdk/openai';
 
-const toon = createToonUI();
+const toon = createToonProtocol();
 
 const appToolInstructions = [
   'Available backend tools:',
@@ -324,117 +90,234 @@ const appToolInstructions = [
   '- deleteProduct(id)',
 ].join('\n');
 
-const result = streamText({
-  model,
-  system: [toon.prompt, appToolInstructions].join('\n\n'),
-  messages,
-  tools: {
-    createProduct,
-    deleteProduct,
-  },
-});
+export async function POST(req: Request) {
+  const { messages } = await req.json();
+
+  const result = streamText({
+    model: openai('gpt-4.1'),
+    system: [toon.prompt, appToolInstructions].join('\n\n'),
+    messages,
+    tools: {
+      createProduct: async ({ name, price, stock }) => ({ ok: true, name, price, stock }),
+      deleteProduct: async ({ id }) => ({ ok: true, id }),
+    },
+  });
+
+  return result.toUIMessageStreamResponse();
+}
 ```
 
-O sea:
+### What the server owns
 
-- ToonUI aporta reglas de UI
-- tu app aporta tools y orquestación
+- model provider
+- tool definitions
+- system prompt composition
+- persistence
+- auth and business rules
 
-Para la guía completa:
+### What ToonUI gives the server
 
+- `toon.prompt`
+- `formatReplyMessage()`
+- `formatSubmitMessage()`
+- `createChatMessage()`
+- `parseToonUI()`
+- `validateToonUI()`
+
+---
+
+## 2) Frontend integration
+
+Use `@toon-ui/toon-ui` on the client.
+
+```tsx
+'use client';
+
+import { createToonRuntime, ToonMessage } from '@toon-ui/toon-ui';
+import { useChat } from '@ai-sdk/react';
+
+const toon = createToonRuntime();
+
+export function AssistantChat() {
+  const { messages, sendMessage, setMessages } = useChat();
+
+  return (
+    <div>
+      {messages.map((message) => {
+        const content = message.parts
+          .filter((part) => part.type === 'text')
+          .map((part) => part.text ?? '')
+          .join('\n\n');
+
+        return (
+          <div key={message.id}>
+            {message.role === 'assistant' ? (
+              <ToonMessage
+                content={content}
+                runtime={toon}
+                onReply={(payload) => {
+                  const next = toon.createChatMessage(payload);
+                  setMessages((current) => [
+                    ...current,
+                    {
+                      id: crypto.randomUUID(),
+                      role: next.role,
+                      parts: [{ type: 'text', text: next.content }],
+                    },
+                  ]);
+                }}
+                onSubmit={(payload) => {
+                  const next = toon.createChatMessage(payload);
+                  setMessages((current) => [
+                    ...current,
+                    {
+                      id: crypto.randomUUID(),
+                      role: next.role,
+                      parts: [{ type: 'text', text: next.content }],
+                    },
+                  ]);
+                }}
+              />
+            ) : (
+              <pre>{content}</pre>
+            )}
+          </div>
+        );
+      })}
+
+      <button onClick={() => sendMessage({ text: 'crear producto' })}>
+        Enviar ejemplo
+      </button>
+    </div>
+  );
+}
+```
+
+### What the frontend owns
+
+- chat UI
+- transport/hook selection
+- visual components and styling
+- human-visible summaries
+
+### What ToonUI gives the frontend
+
+- `ToonMessage`
+- `ToonRenderer`
+- `onReply` / `onSubmit`
+- default preset via `createToonRuntime()`
+- `createChatMessage()` for chat-ready payload mapping
+
+---
+
+## 3) Full loop
+
+```txt
+User sends text
+-> server sends messages + toon.prompt to the model
+-> assistant returns markdown + optional toon-ui blocks
+-> client renders assistant text with <ToonMessage />
+-> user clicks or submits
+-> ToonUI emits structured payload
+-> toon.createChatMessage(payload)
+-> host app sends that structured content back to the model
+-> model decides whether to call a tool
+```
+
+---
+
+## Core concept: `content` vs `displayContent`
+
+Never show the raw structured payload to the human.
+
+- `content` = what the model receives
+- `displayContent` = what the human should see
+
+Example model-facing content:
+
+```txt
+ui_reply:
+  eventId: reply_abcd1234
+  value: Sí, elimínalo
+  source: button
+  component: button
+```
+
+Human-facing display content:
+
+```txt
+Sí, elimínalo
+```
+
+---
+
+## Main APIs
+
+### `@toon-ui/core`
+
+- `createToonProtocol()`
+- `createToonCoreRuntime()` low-level runtime factory
+- `parseToonUI()`
+- `validateToonUI()`
+- `extractToonBlocks()`
+- `formatReplyMessage()`
+- `formatSubmitMessage()`
+- `createChatMessage()`
+
+### `@toon-ui/react`
+
+- `createToonReactRuntime()`
+- `ToonMessage`
+- `ToonRenderer`
+- `ToonProvider`
+- `useToonUI()`
+- `useToonReply()`
+- `useToonSubmit()`
+- `basicPreset()`
+
+### `@toon-ui/toon-ui`
+
+- `createToonRuntime()`
+- all public exports from core
+- all public exports from react
+
+---
+
+## Documentation by package
+
+- `packages/core/README.md`
+- `packages/react/README.md`
+- `packages/toon-ui/README.md`
+- `packages/prompts/README.md`
+- `packages/cli/README.md`
 - `docs/guides/with-vercel-ai-sdk.md`
-
----
-
-## Apps locales de este repo
-
-### Example vivo
-
-```bash
-pnpm --filter @examples/next-ai-sdk dev
-```
-
-Sirve para probar:
-
-- chat host real
-- render de assistant
-- `ui_reply`
-- `ui_submit`
-- separación entre `content` y `displayContent`
-
-### Playground
-
-```bash
-pnpm --filter @apps/playground dev
-```
-
-Sirve para probar:
-
-- markdown + `toon-ui`
-- AST
-- errores
-- render
-- prompt generado
-
----
-
-## Verificación local del repo
-
-```bash
-pnpm install
-pnpm test
-pnpm typecheck
-pnpm build
-```
-
----
-
-## CLI
-
-Comandos actuales del MVP:
-
-```bash
-pnpm --filter @toon-ui/cli exec toon-ui validate example.toon
-pnpm --filter @toon-ui/cli exec toon-ui inspect example.toon
-```
-
----
-
-## Paquetes del monorepo
-
-- `@toon-ui/core` — parser, AST, validator, formatter
-- `@toon-ui/react` — runtime React y registry tipado
-- `@toon-ui/prompts` — helpers de prompt
-- `@toon-ui/cli` — validate / inspect
-- `@toon-ui/toon-ui` — entrypoint principal recomendado
-
----
-
-## Qué leer después
-
-### Si quieres usarlo ya
-
-1. `examples/next-ai-sdk/README.md`
-2. `docs/guides/with-vercel-ai-sdk.md`
-
-### Si quieres entender la arquitectura
-
-- `docs/architecture/01-mvp-foundation.md`
-- `docs/architecture/02-official-catalog.md`
-- `docs/architecture/03-grammar-spec.md`
-- `docs/architecture/04-error-system.md`
 - `docs/architecture/05-interaction-protocol.md`
 
 ---
 
-## Estado actual
+## Examples
 
-ToonUI está en etapa MVP.
+### Playground
 
-Eso significa:
+```bash
+pnpm install
+pnpm --filter @apps/playground dev
+```
 
-- la arquitectura base ya es real
-- el loop conversacional ya es real
-- el registry ya es real
-- pero el producto todavía está endureciéndose para releases públicas más amplias
+### Next AI SDK example
 
+```bash
+pnpm install
+pnpm --filter @examples/next-ai-sdk dev
+```
+
+---
+
+## Version 0.2.0
+
+This release removes beta package versions and clarifies the public API:
+
+- `createToonProtocol()` for server usage
+- `createToonRuntime()` for client usage
+- `createToonReactRuntime()` for advanced React setups
+- `createToonCoreRuntime()` for low-level core runtime usage

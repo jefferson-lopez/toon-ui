@@ -1,6 +1,6 @@
 {
   "name": "@toon-ui/core",
-  "version": "0.1.2-beta.1",
+  "version": "0.2.0",
   "description": "Core parser, AST, validation, and protocol utilities for ToonUI.",
   "keywords": [
     "toon-ui",
@@ -41,6 +41,6 @@
     "lint": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "zod": "^3.23.8"
+    "zod": "^4.4.3"
   }
 }

@@ -1,5 +1,3 @@
-import type { ToonSubmitPayload } from '@toon-ui/toon-ui';
-
 export type HostMessage = {
   id: string;
   role: 'user' | 'assistant' | 'system';
@@ -30,15 +28,6 @@ export function createHostMessage(
     displayContent,
     kind,
   };
-}
-
-export function createDisplaySubmitSummary(payload: ToonSubmitPayload): string {
-  const fields = payload.node.children.filter((child) => child.type === 'field');
-  const entries = fields
-    .filter((field) => Object.prototype.hasOwnProperty.call(payload.values, field.name))
-    .map((field) => `${field.label}: ${String(payload.values[field.name])}`);
-
-  return [payload.formTitle, ...entries].join('\n');
 }
 
 export function simulateAssistantReply(messages: HostMessage[]): HostMessage {

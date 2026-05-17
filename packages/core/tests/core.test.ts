@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ToonSyntaxError, createToonUI, extractToonBlocks, formatReplyMessage, formatSubmitMessage, parseToonUI, validateToonUI } from '../src';
+import { ToonSyntaxError, createChatMessage, createToonCoreRuntime, createToonProtocol, extractToonBlocks, formatReplyMessage, formatSubmitMessage, parseToonUI, validateToonUI } from '../src';
 
 describe('toon core', () => {
   it('extracts toon-ui blocks from markdown', () => {
@@ -80,14 +80,67 @@ describe('toon core', () => {
     expect(submit).toContain('eventId: submit_123');
   });
 
+  it('creates a protocol-only runtime for server-side prompt usage', () => {
+    const protocol = createToonProtocol();
+
+    expect(protocol.prompt).toContain('You are generating ToonUI');
+    expect(protocol.rules.components).toContain('form');
+    expect(protocol.createChatMessage({
+      kind: 'ui_reply',
+      eventId: 'reply_123',
+      source: 'button',
+      component: 'button',
+      value: 'Abrir detalle',
+    }).content).toContain('ui_reply:');
+  });
+
+  it('creates chat-ready messages for reply and submit interactions', () => {
+    const reply = createChatMessage({
+      kind: 'ui_reply',
+      eventId: 'reply_123',
+      source: 'button',
+      component: 'button',
+      value: 'Sí, elimínalo',
+    });
+
+    const submit = createChatMessage({
+      kind: 'ui_submit',
+      eventId: 'submit_123',
+      source: 'form',
+      intent: 'create_product',
+      formTitle: 'Crear producto',
+      values: { name: 'Coca-Cola', price: 2500 },
+    });
+
+    expect(reply).toMatchObject({
+      role: 'user',
+      kind: 'ui_reply',
+      displayContent: 'Sí, elimínalo',
+      content: expect.stringContaining('ui_reply:'),
+    });
+    expect(submit).toMatchObject({
+      role: 'user',
+      kind: 'ui_submit',
+      displayContent: 'Crear producto\nname: Coca-Cola\nprice: 2500',
+      content: expect.stringContaining('ui_submit:'),
+    });
+  });
+
   it('creates a runtime prompt and preserves the component registry', () => {
     const button = Symbol('button');
-    const runtime = createToonUI({
+    const runtime = createToonCoreRuntime({
       components: { button },
     });
 
     expect(runtime.prompt).toContain('Allowed components');
     expect(runtime.prompt).not.toContain('Available tools');
     expect(runtime.components.button).toBe(button);
+    expect(runtime.createChatMessage({
+      kind: 'ui_reply',
+      eventId: 'reply_123',
+      source: 'button',
+      component: 'button',
+      value: 'Crear producto',
+    }).displayContent).toBe('Crear producto');
   });
 });

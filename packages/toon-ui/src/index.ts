@@ -1,5 +1,5 @@
 import {
-  createToonUI as createBaseToonUI,
+  createToonCoreRuntime,
   type CreateToonUIOptions,
 } from '@toon-ui/core';
 import {
@@ -11,7 +11,7 @@ import {
 export * from '@toon-ui/core';
 export * from '@toon-ui/react';
 
-export function createToonUI(
+export function createToonRuntime(
   options: CreateToonUIOptions<ToonReactComponentRegistry> = {},
 ): ToonReactRuntime {
   const mergedComponents: ToonReactComponentRegistry = {
@@ -19,7 +19,7 @@ export function createToonUI(
     ...(options.components ?? {}),
   };
 
-  return createBaseToonUI<ToonReactComponentRegistry>({
+  return createToonCoreRuntime<ToonReactComponentRegistry>({
     ...options,
     components: mergedComponents,
   }) as ToonReactRuntime;

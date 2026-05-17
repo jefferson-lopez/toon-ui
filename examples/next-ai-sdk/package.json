@@ -1,7 +1,7 @@
 {
   "name": "@examples/next-ai-sdk",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.2.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -10,11 +10,11 @@
     "lint": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0",
-    "@toon-ui/toon-ui": "workspace:*"
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
+    "@toon-ui/toon-ui": "link:../../packages/toon-ui"
   },
   "devDependencies": {
-    "vite": "^7.1.12"
+    "vite": "^8.0.13"
   }
 }

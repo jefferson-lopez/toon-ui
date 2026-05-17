@@ -3,6 +3,7 @@ import type {
   AlertNode,
   BadgeNode,
   ButtonNode,
+  CreateToonUIOptions,
   CardNode,
   ConfirmNode,
   FieldNode,
@@ -17,6 +18,7 @@ import type {
   ToonNodeByType,
   ToonRuntime,
 } from '@toon-ui/core';
+import { createToonCoreRuntime } from '@toon-ui/core';
 
 export type ToonFieldValue = string | number | boolean;
 
@@ -83,6 +85,12 @@ export type ToonReactComponentRegistry = Partial<{
 }>;
 
 export type ToonReactRuntime = ToonRuntime<ToonReactComponentRegistry>;
+
+export function createToonReactRuntime(
+  options: CreateToonUIOptions<ToonReactComponentRegistry> = {},
+): ToonReactRuntime {
+  return createToonCoreRuntime<ToonReactComponentRegistry>(options) as ToonReactRuntime;
+}
 
 const ToonRuntimeContext = createContext<ToonReactRuntime | null>(null);
 const ToonRenderContext = createContext<ToonRenderContextValue | null>(null);

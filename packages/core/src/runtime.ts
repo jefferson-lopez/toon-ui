@@ -2,7 +2,7 @@ import { createPrompt } from './prompts';
 import { parseToonUI } from './parser';
 import { validateToonUI } from './validator';
 import { extractToonBlocks } from './formatter';
-import { ALERT_VARIANTS, BADGE_VARIANTS, BUTTON_VARIANTS, FIELD_TYPES, OFFICIAL_COMPONENT_KEYS, type CreateToonUIOptions, type ReplyPayload, type SubmitPayload, type ToonComponentRegistry, type ToonRules, type ToonRuntime } from './types';
+import { ALERT_VARIANTS, BADGE_VARIANTS, BUTTON_VARIANTS, FIELD_TYPES, OFFICIAL_COMPONENT_KEYS, type CreateToonUIOptions, type ReplyPayload, type SubmitPayload, type ToonChatMessage, type ToonComponentRegistry, type ToonInteractionPayload, type ToonProtocol, type ToonRules, type ToonRuntime } from './types';
 
 function createEventId(prefix: string): string {
   return `${prefix}_${Math.random().toString(36).slice(2, 10)}`;
@@ -56,16 +56,50 @@ export function formatReplyMessage(valueOrPayload: string | ReplyPayload, metada
   return lines.join('\n');
 }
 
-export function createToonUI<TComponents extends ToonComponentRegistry = ToonComponentRegistry>(options: CreateToonUIOptions<TComponents> = {}): ToonRuntime<TComponents> {
-  const rules = createRules();
+function createSubmitDisplayContent(payload: SubmitPayload): string {
+  const entries = Object.entries(payload.values).map(([key, value]) => `${key}: ${String(value)}`);
+  return [payload.formTitle, ...entries].join('\n');
+}
+
+export function createChatMessage<TPayload extends ToonInteractionPayload>(payload: TPayload): ToonChatMessage<TPayload> {
+  if (payload.kind === 'ui_reply') {
+    return {
+      role: 'user',
+      kind: payload.kind,
+      content: formatReplyMessage(payload),
+      displayContent: payload.value,
+      payload,
+    };
+  }
+
   return {
-    components: (options.components ?? {}) as TComponents,
+    role: 'user',
+    kind: payload.kind,
+    content: formatSubmitMessage(payload),
+    displayContent: createSubmitDisplayContent(payload),
+    payload,
+  };
+}
+
+export function createToonProtocol(): ToonProtocol {
+  const rules = createRules();
+
+  return {
     prompt: createPrompt(rules),
     rules,
+    formatSubmitMessage,
+    formatReplyMessage,
+    createChatMessage,
+  };
+}
+
+export function createToonCoreRuntime<TComponents extends ToonComponentRegistry = ToonComponentRegistry>(options: CreateToonUIOptions<TComponents> = {}): ToonRuntime<TComponents> {
+  const protocol = createToonProtocol();
+  return {
+    components: (options.components ?? {}) as TComponents,
+    ...protocol,
     parse: parseToonUI,
     validate: validateToonUI,
     extractBlocks: extractToonBlocks,
-    formatSubmitMessage,
-    formatReplyMessage,
   };
 }

@@ -165,19 +165,33 @@ export interface SubmitPayload {
   line?: number;
 }
 
+export type ToonInteractionPayload = ReplyPayload | SubmitPayload;
+
+export interface ToonChatMessage<TPayload extends ToonInteractionPayload = ToonInteractionPayload> {
+  role: "user";
+  kind: TPayload["kind"];
+  content: string;
+  displayContent: string;
+  payload: TPayload;
+}
+
+export interface ToonProtocol {
+  prompt: string;
+  rules: ToonRules;
+  formatSubmitMessage: typeof import('./runtime').formatSubmitMessage;
+  formatReplyMessage: typeof import('./runtime').formatReplyMessage;
+  createChatMessage: typeof import('./runtime').createChatMessage;
+}
+
 export type ToonComponentRegistry = Partial<{ [K in keyof ToonNodeByType]: unknown }>;
 
 export interface CreateToonUIOptions<TComponents extends ToonComponentRegistry = ToonComponentRegistry> {
   components?: TComponents;
 }
 
-export interface ToonRuntime<TComponents extends ToonComponentRegistry = ToonComponentRegistry> {
+export interface ToonRuntime<TComponents extends ToonComponentRegistry = ToonComponentRegistry> extends ToonProtocol {
   components: TComponents;
-  prompt: string;
-  rules: ToonRules;
   parse: typeof import('./parser').parseToonUI;
   validate: typeof import('./validator').validateToonUI;
   extractBlocks: typeof import('./formatter').extractToonBlocks;
-  formatSubmitMessage: typeof import('./runtime').formatSubmitMessage;
-  formatReplyMessage: typeof import('./runtime').formatReplyMessage;
 }

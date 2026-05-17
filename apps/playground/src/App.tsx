@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { ToonMessage, createToonUI } from '@toon-ui/toon-ui';
+import { ToonMessage, createToonRuntime } from '@toon-ui/toon-ui';
 
 const sample = [
   'Claro, encontré este producto.',
@@ -12,7 +12,7 @@ const sample = [
   '```',
 ].join('\n');
 
-const toon = createToonUI();
+const toon = createToonRuntime();
 
 export default function App() {
   const [content, setContent] = useState(sample);

@@ -1,24 +1,14 @@
 # @toon-ui/core
 
-Core parser, AST, validation, and protocol utilities for ToonUI.
+`@toon-ui/core` is the server and protocol foundation of ToonUI.
 
-This package is for low-level usage.
+Use it when you need:
 
-If you want the easiest React integration, use:
-
-- `@toon-ui/toon-ui`
-
----
-
-## What it includes
-
-- `parseToonUI()`
-- `validateToonUI()`
-- `extractToonBlocks()`
-- `createRules()`
-- `createPrompt()`
-- `formatReplyMessage()`
-- `formatSubmitMessage()`
+- `createToonProtocol()` on the server
+- prompt generation
+- parsing and validation
+- interaction payload formatting
+- chat-ready interaction messages
 
 ---
 
@@ -30,67 +20,149 @@ pnpm add @toon-ui/core
 
 ---
 
-## Example
+## Main exports
+
+- `createToonProtocol()`
+- `createToonCoreRuntime()` low-level runtime
+- `parseToonUI()`
+- `validateToonUI()`
+- `extractToonBlocks()`
+- `formatReplyMessage()`
+- `formatSubmitMessage()`
+- `createChatMessage()`
+- `createPrompt()`
+
+---
+
+## Server integration
+
+This is the PRIMARY use case.
 
 ```ts
-import {
-  extractToonBlocks,
-  parseToonUI,
-  validateToonUI,
-} from '@toon-ui/core';
+import { createToonProtocol } from '@toon-ui/core';
+import { streamText } from 'ai';
+import { openai } from '@ai-sdk/openai';
 
-const content = `
-Claro, encontré este producto.
+const toon = createToonProtocol();
 
-\`\`\`toon-ui
-card "Producto encontrado":
-  text "Coca-Cola 400ml"
-  badge "Activo" success
-\`\`\`
-`;
+const system = [
+  toon.prompt,
+  'Available tools:',
+  '- searchProducts(query)',
+  '- createProduct(name, price, stock)',
+].join('\n\n');
+
+export async function POST(req: Request) {
+  const { messages } = await req.json();
+
+  const result = streamText({
+    model: openai('gpt-4.1'),
+    system,
+    messages,
+    tools: {
+      searchProducts: async ({ query }) => ({ ok: true, query }),
+      createProduct: async ({ name, price, stock }) => ({ ok: true, name, price, stock }),
+    },
+  });
+
+  return result.toUIMessageStreamResponse();
+}
+```
+
+What `createToonProtocol()` gives you:
+
+- `prompt`
+- `rules`
+- `formatReplyMessage()`
+- `formatSubmitMessage()`
+- `createChatMessage()`
+
+---
+
+## Frontend integration
+
+`@toon-ui/core` is NOT the recommended frontend renderer package.
+
+Use it on the frontend only if you are building custom tooling or your own renderer.
+
+```ts
+import { extractToonBlocks, parseToonUI, validateToonUI } from '@toon-ui/core';
 
 const blocks = extractToonBlocks(content);
 const ast = parseToonUI(blocks[0].raw);
 const result = validateToonUI(ast);
+```
 
-console.log(result.ok);
+If you want React rendering, use:
+
+- `@toon-ui/react`
+- or `@toon-ui/toon-ui`
+
+---
+
+## Interaction helpers
+
+### `formatReplyMessage()`
+
+```ts
+import { formatReplyMessage } from '@toon-ui/core';
+
+const content = formatReplyMessage({
+  kind: 'ui_reply',
+  eventId: 'reply_123',
+  source: 'button',
+  component: 'button',
+  value: 'Sí, elimínalo',
+});
+```
+
+### `formatSubmitMessage()`
+
+```ts
+import { formatSubmitMessage } from '@toon-ui/core';
+
+const content = formatSubmitMessage({
+  kind: 'ui_submit',
+  eventId: 'submit_123',
+  source: 'form',
+  intent: 'create_product',
+  formTitle: 'Crear producto',
+  values: { name: 'Coca-Cola', price: 2500 },
+});
+```
+
+### `createChatMessage()`
+
+```ts
+import { createChatMessage } from '@toon-ui/core';
+
+const message = createChatMessage({
+  kind: 'ui_reply',
+  eventId: 'reply_123',
+  source: 'button',
+  component: 'button',
+  value: 'Sí, elimínalo',
+});
+
+console.log(message.content);
+console.log(message.displayContent);
 ```
 
 ---
 
-## Typical use cases
+## Boundary
 
-Use `@toon-ui/core` if you want to:
-
-- parse ToonUI without React
-- build your own renderer
-- validate assistant output before rendering
-- inspect ASTs in tooling or CI
-- format structured reply/submit messages yourself
-
----
-
-## Important boundary
-
-`@toon-ui/core` does NOT know:
-
-- React
-- your components
-- AI SDK tools
-- backend logic
-
-It only owns:
+`@toon-ui/core` owns:
 
 - grammar
-- typed AST
+- AST
 - validation
-- protocol formatting
+- prompts
+- interaction protocol
 
----
+It does NOT own:
 
-## Related packages
-
-- `@toon-ui/react` — React runtime and component registry
-- `@toon-ui/prompts` — prompt helpers
-- `@toon-ui/toon-ui` — easiest public entrypoint
-
+- React rendering
+- backend tools
+- persistence
+- model orchestration
