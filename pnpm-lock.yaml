@@ -71,7 +71,7 @@ importers:
   packages/cli:
     dependencies:
       '@toon-ui/core':
-        specifier: workspace:0.2.0
+        specifier: workspace:0.3.0
         version: link:../core
 
   packages/core:
@@ -83,13 +83,13 @@ importers:
   packages/prompts:
     dependencies:
       '@toon-ui/core':
-        specifier: workspace:0.2.0
+        specifier: workspace:0.3.0
         version: link:../core
 
   packages/react:
     dependencies:
       '@toon-ui/core':
-        specifier: workspace:0.2.0
+        specifier: workspace:0.3.0
         version: link:../core
       react:
         specifier: ^19.2.6
@@ -98,10 +98,10 @@ importers:
   packages/toon-ui:
     dependencies:
       '@toon-ui/core':
-        specifier: workspace:0.2.0
+        specifier: workspace:0.3.0
         version: link:../core
       '@toon-ui/react':
-        specifier: workspace:0.2.0
+        specifier: workspace:0.3.0
         version: link:../react
       react:
         specifier: ^19.2.6

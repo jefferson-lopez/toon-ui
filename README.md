@@ -313,7 +313,7 @@ pnpm --filter @examples/next-ai-sdk dev
 
 ---
 
-## Version 0.2.0
+## Version 0.3.0
 
 This release removes beta package versions and clarifies the public API:
 
