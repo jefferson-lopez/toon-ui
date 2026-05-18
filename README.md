@@ -1,6 +1,36 @@
 # ToonUI
 
-ToonUI lets an LLM answer with normal markdown plus compact `toon-ui` blocks, while your app keeps control of chat state, tools, persistence, and business logic.
+ToonUI lets an LLM answer with normal markdown plus compact `toon-ui` blocks, while your app keeps ownership of tools, persistence, transport, and business logic.
+
+## What problem ToonUI solves
+
+Without ToonUI, an LLM usually has to return:
+
+- raw text only
+- HTML/React/JSON that is too open-ended
+- UI structures that are hard to validate and unsafe to trust
+
+ToonUI gives you a middle layer:
+
+- constrained UI grammar
+- typed AST
+- validation
+- React rendering
+- structured interaction payloads
+
+That means the model can say:
+
+```toon-ui
+form "Agregar cliente":
+  field name text "Nombre" required
+  field email email "Email" required
+  field phone text "Teléfono" required
+  button primary "Agregar cliente" submit
+```
+
+and your app can render that safely and feed the interaction back into the chat loop in a structured way.
+
+---
 
 ## Quick path
 
@@ -8,7 +38,7 @@ ToonUI lets an LLM answer with normal markdown plus compact `toon-ui` blocks, wh
 2. Use `@toon-ui/toon-ui` on the client with `createToonRuntime()`.
 3. Render assistant messages with `ToonMessage`.
 4. Feed `toon.prompt` into your system prompt.
-5. Convert `onReply` / `onSubmit` payloads with `toon.createChatMessage(payload)`.
+5. Convert `onReply` / `onSubmit` payloads with `toon.createChatUIMessage(payload)` if you use `useChat`, or `toon.createChatMessage(payload)` for a generic host loop.
 
 ---
 
@@ -17,35 +47,47 @@ ToonUI lets an LLM answer with normal markdown plus compact `toon-ui` blocks, wh
 | Package | Purpose | Server | Frontend |
 |---|---|---:|---:|
 | `@toon-ui/core` | Protocol, parser, AST, validation, chat payload helpers | ✅ | ✅ low-level |
-| `@toon-ui/react` | React renderer with your own component registry | with core | ✅ |
-| `@toon-ui/toon-ui` | Simplest public API with built-in preset | with core on server | ✅ |
-| `@toon-ui/prompts` | Prompt-building helpers only | ✅ | ⚠️ not a renderer |
-| `@toon-ui/cli` | Validation and AST inspection from terminal/CI | ✅ | ❌ |
+| `@toon-ui/react` | Explicit React renderer with your own registry | with core | ✅ |
+| `@toon-ui/toon-ui` | Main public package with built-in preset | with core on server | ✅ |
+| `@toon-ui/prompts` | Prompt fragments only | ✅ | ⚠️ not a renderer |
+| `@toon-ui/cli` | Validation / inspect in terminal and CI | ✅ | ❌ |
 
 ---
 
-## Recommended architecture
+## Architecture
 
 ```txt
 Server
   createToonProtocol()
   -> toon.prompt
-  -> streamText()/Responses API/your SDK
-  -> tools stay in your app
+  -> model call
+  -> tools remain in your app
 
 Client
   createToonRuntime()
   -> <ToonMessage />
   -> onReply/onSubmit
-  -> toon.createChatMessage(payload)
-  -> back into your chat transport/state
+  -> createChatUIMessage() or createChatMessage()
+  -> back into your chat state
 ```
 
-This boundary is intentional:
+### Responsibility split
 
-- the server owns the model and tools
-- the client owns rendering and UX
-- ToonUI owns the UI protocol
+ToonUI owns:
+
+- UI grammar
+- validation
+- rendering
+- structured interaction payloads
+
+Your app owns:
+
+- model provider
+- tool calling
+- persistence
+- auth
+- business mutations
+- message transport
 
 ---
 
@@ -68,6 +110,40 @@ pnpm add @toon-ui/core @toon-ui/react react react-dom
 ```bash
 pnpm add -D @toon-ui/cli
 ```
+
+---
+
+## The most important concept: `content` vs `displayContent`
+
+This is the part people get wrong FIRST.
+
+- `content` = what the model should receive
+- `displayContent` = what the human should see
+
+Example user action:
+
+### Model-facing content
+
+```txt
+ui_submit:
+  eventId: submit_9p245eo7
+  intent: agregar_cliente
+  formTitle: Agregar cliente
+  name: "Jefferson Lopez Mendoza"
+  email: "jeffersonlopezmendoza343@gmail.com"
+  phone: "4157145953"
+```
+
+### Human-facing display content
+
+```txt
+Agregar cliente
+name: Jefferson Lopez Mendoza
+email: jeffersonlopezmendoza343@gmail.com
+phone: 4157145953
+```
+
+If the human sees the raw `ui_submit:` block, your integration is wrong.
 
 ---
 
@@ -107,26 +183,18 @@ export async function POST(req: Request) {
 }
 ```
 
-### What the server owns
-
-- model provider
-- tool definitions
-- system prompt composition
-- persistence
-- auth and business rules
-
-### What ToonUI gives the server
+### What you use from the protocol
 
 - `toon.prompt`
-- `formatReplyMessage()`
-- `formatSubmitMessage()`
-- `createChatMessage()`
-- `parseToonUI()`
-- `validateToonUI()`
+- `toon.rules`
+- `toon.formatReplyMessage()`
+- `toon.formatSubmitMessage()`
+- `toon.createChatMessage()`
+- `toon.createChatUIMessage()`
 
 ---
 
-## 2) Frontend integration
+## 2) Client integration
 
 Use `@toon-ui/toon-ui` on the client.
 
@@ -175,7 +243,7 @@ export function AssistantChat() {
         );
       })}
 
-      <button onClick={() => sendMessage({ text: 'crear producto' })}>
+      <button onClick={() => sendMessage({ text: 'agregar cliente' })}>
         Enviar ejemplo
       </button>
     </div>
@@ -183,61 +251,77 @@ export function AssistantChat() {
 }
 ```
 
-### What the frontend owns
-
-- chat UI
-- transport/hook selection
-- visual components and styling
-- human-visible summaries
-
-### What ToonUI gives the frontend
-
-- `ToonMessage`
-- `ToonRenderer`
-- `onReply` / `onSubmit`
-- default preset via `createToonRuntime()`
-- `createChatMessage()` for chat-ready payload mapping
-
 ---
 
 ## 3) Full loop
 
 ```txt
 User sends text
--> server sends messages + toon.prompt to the model
+-> server calls model with toon.prompt
 -> assistant returns markdown + optional toon-ui blocks
--> client renders assistant text with <ToonMessage />
+-> client renders with ToonMessage
 -> user clicks or submits
 -> ToonUI emits structured payload
--> toon.createChatMessage(payload)
--> host app sends that structured content back to the model
+-> host app converts payload back into chat state
+-> model receives content
+-> human sees displayContent
 -> model decides whether to call a tool
 ```
 
 ---
 
-## Core concept: `content` vs `displayContent`
+## When to use `createChatMessage()` vs `createChatUIMessage()`
 
-Never show the raw structured payload to the human.
+## `createChatMessage(payload)`
 
-- `content` = what the model receives
-- `displayContent` = what the human should see
+Use this when your app has its OWN host message model.
 
-Example model-facing content:
+Return shape:
 
-```txt
-ui_reply:
-  eventId: reply_abcd1234
-  value: Sí, elimínalo
-  source: button
-  component: button
+- `role`
+- `kind`
+- `content`
+- `displayContent`
+- `payload`
+
+Example:
+
+```ts
+const message = toon.createChatMessage(payload);
+
+hostMessages.push({
+  id: crypto.randomUUID(),
+  role: message.role,
+  content: message.content,
+  displayContent: message.displayContent,
+});
 ```
 
-Human-facing display content:
+## `createChatUIMessage(payload)`
 
-```txt
-Sí, elimínalo
+Use this when your app uses `useChat` / `UIMessage`-style state and wants a message already shaped for that pattern.
+
+Return shape:
+
+- `id`
+- `role`
+- `parts`
+- `metadata.displayContent`
+- `metadata.kind`
+
+Example:
+
+```ts
+setMessages((current) => [
+  ...current,
+  toon.createChatUIMessage(payload),
+]);
 ```
+
+### Rule of thumb
+
+- custom host state -> `createChatMessage()`
+- `useChat` state -> `createChatUIMessage()`
 
 ---
 
@@ -246,7 +330,7 @@ Sí, elimínalo
 ### `@toon-ui/core`
 
 - `createToonProtocol()`
-- `createToonCoreRuntime()` low-level runtime factory
+- `createToonCoreRuntime()`
 - `parseToonUI()`
 - `validateToonUI()`
 - `extractToonBlocks()`
@@ -264,6 +348,7 @@ Sí, elimínalo
 - `useToonUI()`
 - `useToonReply()`
 - `useToonSubmit()`
+- `useToonAction()`
 - `basicPreset()`
 
 ### `@toon-ui/toon-ui`
@@ -274,7 +359,51 @@ Sí, elimínalo
 
 ---
 
-## Documentation by package
+## Common mistakes
+
+### Mistake 1: showing protocol payloads to the user
+
+Wrong:
+
+```tsx
+<pre>{content}</pre>
+```
+
+when `content` is the raw `ui_submit`.
+
+Correct:
+
+```tsx
+<pre>{message.metadata?.displayContent ?? content}</pre>
+```
+
+### Mistake 2: using the client runtime on the server
+
+Wrong:
+
+```ts
+import { createToonRuntime } from '@toon-ui/toon-ui';
+```
+
+Correct:
+
+```ts
+import { createToonProtocol } from '@toon-ui/core';
+```
+
+### Mistake 3: expecting ToonUI to execute business actions
+
+Wrong mental model:
+
+> “User submitted the form, so ToonUI should create the customer.”
+
+Correct mental model:
+
+> ToonUI sends structured user intent back into the chat loop. Your app decides whether a tool should run.
+
+---
+
+## Documentation map
 
 - `packages/core/README.md`
 - `packages/react/README.md`
@@ -304,11 +433,12 @@ pnpm --filter @examples/next-ai-sdk dev
 
 ---
 
-## Version 0.3.2
+## Version 0.4.0
 
-This release removes beta package versions and clarifies the public API:
+This release line clarifies the naming and interaction boundary:
 
 - `createToonProtocol()` for server usage
 - `createToonRuntime()` for client usage
 - `createToonReactRuntime()` for advanced React setups
 - `createToonCoreRuntime()` for low-level core runtime usage
+- `createChatUIMessage()` for `useChat`-style integrations

@@ -8,6 +8,16 @@ function createEventId(prefix: string): string {
   return `${prefix}_${Math.random().toString(36).slice(2, 10)}`;
 }
 
+type SubmitPayloadWithOptionalNode = SubmitPayload & {
+  node?: {
+    children?: Array<{
+      type?: string;
+      name?: string;
+      label?: string;
+    }>;
+  };
+};
+
 export function createRules(): ToonRules {
   return {
     components: OFFICIAL_COMPONENT_KEYS,
@@ -56,8 +66,20 @@ export function formatReplyMessage(valueOrPayload: string | ReplyPayload, metada
   return lines.join('\n');
 }
 
-function createSubmitDisplayContent(payload: SubmitPayload): string {
-  const entries = Object.entries(payload.values).map(([key, value]) => `${key}: ${String(value)}`);
+function createSubmitDisplayContent(payload: SubmitPayloadWithOptionalNode): string {
+  const fieldLabels = new Map<string, string>();
+
+  payload.node?.children?.forEach((child) => {
+    if (child?.type === 'field' && child.name && child.label) {
+      fieldLabels.set(child.name, child.label);
+    }
+  });
+
+  const entries = Object.entries(payload.values).map(([key, value]) => {
+    const label = fieldLabels.get(key) ?? key;
+    return `${label}: ${String(value)}`;
+  });
+
   return [payload.formTitle, ...entries].join('\n');
 }
 

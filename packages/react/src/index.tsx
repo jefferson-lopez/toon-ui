@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useMemo, useState } from 'react';
+import ReactMarkdown from 'react-markdown';
 import type {
   AlertNode,
   BadgeNode,
@@ -417,7 +418,11 @@ export function ToonMessage({
 
   return (
     <div data-toon-ui-message>
-      {markdown ? <div data-toon-markdown>{markdown}</div> : null}
+      {markdown ? (
+        <div data-toon-markdown>
+          <ReactMarkdown>{markdown}</ReactMarkdown>
+        </div>
+      ) : null}
       {blocks.length > 0 ? <ToonRenderer content={content} runtime={runtime} onReply={onReply} onSubmit={onSubmit} /> : null}
     </div>
   );

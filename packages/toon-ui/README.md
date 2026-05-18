@@ -218,7 +218,7 @@ Low-level renderer for only the structured ToonUI blocks.
 
 ### Use it when
 
-- markdown is rendered elsewhere
+- markdown is already rendered elsewhere by your host app
 - you want ToonUI only for the UI block section
 
 ### Example

@@ -110,6 +110,16 @@ describe('toon core', () => {
       intent: 'create_product',
       formTitle: 'Crear producto',
       values: { name: 'Coca-Cola', price: 2500 },
+      node: {
+        type: 'form',
+        title: 'Crear producto',
+        line: 1,
+        column: 1,
+        children: [
+          { type: 'field', name: 'name', fieldType: 'text', label: 'Nombre', required: true, line: 2, column: 1 },
+          { type: 'field', name: 'price', fieldType: 'number', label: 'Precio', required: true, line: 3, column: 1 },
+        ],
+      },
     });
 
     expect(reply).toMatchObject({
@@ -121,9 +131,18 @@ describe('toon core', () => {
     expect(submit).toMatchObject({
       role: 'user',
       kind: 'ui_submit',
-      displayContent: 'Crear producto\nname: Coca-Cola\nprice: 2500',
+      displayContent: 'Crear producto\nNombre: Coca-Cola\nPrecio: 2500',
       content: expect.stringContaining('ui_submit:'),
     });
+  });
+
+  it('creates stronger prompt guidance for canonical syntax and invalid constructs', () => {
+    const protocol = createToonProtocol();
+
+    expect(protocol.prompt).toContain('Canonical syntax rules:');
+    expect(protocol.prompt).toContain('badge MUST be: badge "Label" <variant>');
+    expect(protocol.prompt).toContain('NEVER invent components such as header');
+    expect(protocol.prompt).toContain('badge success "Cliente" -> INVALID');
   });
 
   it('creates ui-message-shaped chat entries with metadata for frontend rendering', () => {

@@ -230,11 +230,11 @@ If you already separated the ToonUI block yourself and only want to render the s
 
 Low-level renderer for ONLY the ToonUI blocks inside a string.
 
-It does NOT own the surrounding markdown presentation.
+It does NOT render surrounding markdown.
 
 ### Use it when
 
-- your host app renders markdown separately
+- your host app already renders markdown separately
 - you want ToonUI to handle only the structured UI section
 
 ### Props

@@ -1,10 +1,23 @@
 # Using ToonUI with Vercel AI SDK
 
-This is the minimum correct integration:
+This guide shows the complete mental model for integrating ToonUI with `useChat` / `streamText`.
+
+## The correct split
 
 - server uses `@toon-ui/core`
 - client uses `@toon-ui/toon-ui`
-- the host app keeps ownership of tools, transport, persistence, and message state
+- your app owns tool execution and persistence
+- ToonUI owns UI grammar, rendering, and interaction payloads
+
+---
+
+## Quick path
+
+1. Build a server protocol with `createToonProtocol()`.
+2. Add `toon.prompt` to your system prompt.
+3. Render assistant responses with `ToonMessage`.
+4. Convert interactions with `toon.createChatUIMessage(payload)`.
+5. Show `metadata.displayContent` to the human, not raw protocol text.
 
 ---
 
@@ -32,6 +45,7 @@ const system = [
   'Available tools:',
   '- searchProducts(query)',
   '- createProduct(name, price, stock)',
+  '- createCustomer(name, email, phone)',
 ].join('\n\n');
 
 export async function POST(req: Request) {
@@ -44,12 +58,22 @@ export async function POST(req: Request) {
     tools: {
       searchProducts: async ({ query }) => ({ ok: true, query }),
       createProduct: async ({ name, price, stock }) => ({ ok: true, name, price, stock }),
+      createCustomer: async ({ name, email, phone }) => ({ ok: true, name, email, phone }),
     },
   });
 
   return result.toUIMessageStreamResponse();
 }
 ```
+
+### Why this matters
+
+The model needs two kinds of knowledge:
+
+1. **How to emit valid ToonUI** -> `toon.prompt`
+2. **What backend capabilities exist** -> your tool instructions
+
+Those are related, but they are NOT the same concern.
 
 ---
 
@@ -102,7 +126,7 @@ export function AssistantChat() {
         );
       })}
 
-      <button onClick={() => sendMessage({ text: 'crear producto' })}>
+      <button onClick={() => sendMessage({ text: 'agregar cliente' })}>
         Probar
       </button>
     </div>
@@ -112,41 +136,197 @@ export function AssistantChat() {
 
 ---
 
-## 3. Flow
+## 3. Why `createChatUIMessage()` matters
+
+This helper exists for one reason:
+
+`useChat` wants `UIMessage`-style objects, but ToonUI needs to preserve:
+
+- **model-facing content**
+- **human-facing display content**
+
+When you do:
+
+```ts
+toon.createChatUIMessage(payload)
+```
+
+you get:
+
+- `parts[0].text` -> raw structured content for the model
+- `metadata.displayContent` -> safe readable content for the human
+
+That avoids the classic bug where the user sees:
 
 ```txt
-User sends text
--> server sends messages + toon.prompt to the model
--> assistant returns markdown + optional toon-ui blocks
--> client renders with ToonMessage
--> user clicks/submits
--> ToonUI emits structured payload
--> toon.createChatMessage(payload)
--> host app sends structured content back to the model
--> model decides whether to call a tool
+ui_submit:
+  eventId: ...
+  intent: ...
+  ...
+```
+
+instead of a readable summary.
+
+---
+
+## 4. `createChatMessage()` vs `createChatUIMessage()`
+
+## Use `createChatMessage()` when:
+
+- your app has its own host message shape
+- you do not rely on `UIMessage`
+- you want direct access to `content` and `displayContent`
+
+```ts
+const message = toon.createChatMessage(payload);
+
+hostMessages.push({
+  id: crypto.randomUUID(),
+  role: message.role,
+  content: message.content,
+  displayContent: message.displayContent,
+});
+```
+
+## Use `createChatUIMessage()` when:
+
+- your app uses `useChat`
+- your app uses a `UIMessage`-like structure
+- you want the split already mapped correctly
+
+```ts
+setMessages((current) => [
+  ...current,
+  toon.createChatUIMessage(payload),
+]);
 ```
 
 ---
 
-## 4. Boundary
+## 5. Example: customer creation flow
 
-ToonUI owns:
+### User asks
 
-- UI protocol
-- prompt rules
-- structured interaction payloads
-- rendering
+```txt
+crea un formulario para un cliente
+```
 
-Important:
+### Assistant responds
 
-- the model should receive `content`
-- the human should see `displayContent`
-- `createChatUIMessage()` helps preserve that split when using `useChat`
+```toon-ui
+form "Agregar cliente":
+  field name text "Nombre" required
+  field email email "Email" required
+  field phone text "Teléfono" required
+  button primary "Agregar cliente" submit
+```
 
-Your app owns:
+### User submits
 
-- tools
-- persistence
-- auth
-- business actions
-- chat transport
+ToonUI emits a payload like:
+
+```txt
+ui_submit:
+  eventId: submit_9p245eo7
+  intent: agregar_cliente
+  formTitle: Agregar cliente
+  name: "Jefferson Lopez Mendoza"
+  email: "jeffersonlopezmendoza343@gmail.com"
+  phone: "4157145953"
+```
+
+### Model should receive
+
+That exact structured content.
+
+### Human should see
+
+```txt
+Agregar cliente
+name: Jefferson Lopez Mendoza
+email: jeffersonlopezmendoza343@gmail.com
+phone: 4157145953
+```
+
+### Correct state update
+
+```ts
+setMessages((current) => [
+  ...current,
+  toon.createChatUIMessage(payload),
+]);
+```
+
+### Correct render for user messages
+
+```tsx
+<pre>{message.metadata?.displayContent ?? content}</pre>
+```
+
+---
+
+## 6. Common mistakes
+
+## Mistake 1: rendering raw protocol text for humans
+
+Wrong:
+
+```tsx
+<pre>{content}</pre>
+```
+
+for user messages produced from Toon interactions.
+
+Correct:
+
+```tsx
+<pre>{message.metadata?.displayContent ?? content}</pre>
+```
+
+## Mistake 2: putting `createToonRuntime()` on the server
+
+Wrong:
+
+```ts
+import { createToonRuntime } from '@toon-ui/toon-ui';
+```
+
+Correct:
+
+```ts
+import { createToonProtocol } from '@toon-ui/core';
+```
+
+## Mistake 3: expecting ToonUI to execute tools
+
+Wrong idea:
+
+> The user submitted the form, so ToonUI should create the customer.
+
+Correct idea:
+
+> ToonUI sends structured user intent back into the conversation. Your app or model decides whether a tool should run.
+
+---
+
+## 7. Boundary checklist
+
+Before shipping, verify:
+
+- [ ] server uses `createToonProtocol()`
+- [ ] client uses `createToonRuntime()`
+- [ ] assistant messages render with `ToonMessage`
+- [ ] `onReply` and `onSubmit` feed back into chat state
+- [ ] human sees `displayContent`
+- [ ] model receives structured `content`
+- [ ] tools stay in the host app
+
+---
+
+## 8. Related docs
+
+- `README.md`
+- `packages/core/README.md`
+- `packages/react/README.md`
+- `packages/toon-ui/README.md`
+- `docs/architecture/05-interaction-protocol.md`
