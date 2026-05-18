@@ -1,0 +1,105 @@
+---
+title: "Syntax"
+description: "Grammar examples for the most important ToonUI blocks."
+---
+
+## General rules
+
+- ToonUI is written inside fenced ```` ```toon-ui ```` blocks
+- Nested blocks use indentation
+- Most containers end with `:`
+- Actions are explicit: `reply="..."` or `submit`
+- The syntax is compact on purpose so models can emit it reliably
+
+## Form example
+
+```txt
+form "Create product":
+  field name text "Name" required
+  field price number "Price" required
+  button primary "Create product" submit
+```
+
+## List example
+
+```txt
+list "Products":
+  item "Toon Mug":
+    text "Ceramic mug"
+    badge "In stock" success
+    button secondary "Open" reply="open:toon-mug"
+```
+
+## Card example
+
+```txt
+card "Customer found":
+  text "Jefferson Lopez Mendoza"
+  badge "Active" success
+  button secondary "View history" reply="view-customer-history"
+```
+
+## Confirm example
+
+```txt
+confirm danger "Delete customer?":
+  text "This action cannot be undone."
+  button secondary "Cancel" reply="cancel"
+  button danger "Yes, delete" reply="delete-customer"
+```
+
+## Table example
+
+```txt
+table "Sales":
+  columns: "Date", "Sale number", "Total", "Status"
+  row: "May 14", "S-001", "$25.00", "Paid"
+  row: "May 15", "S-002", "$48.00", "Pending"
+```
+
+## Navigation examples
+
+```txt
+breadcrumb:
+  crumb "Customers" reply="go:customers"
+  crumb "Jefferson Lopez"
+```
+
+```txt
+menu "Quick actions":
+  action "Create customer" reply="create-customer"
+  action "Start sale" reply="start-sale"
+```
+
+## Field examples
+
+```txt
+field email email "Email" placeholder="name@company.com" required
+field category select "Category" options="Beverages|Snacks|Home"
+field tags multiselect "Tags" options="Popular|Fragile|Imported"
+field active switch "Active" value=true
+field score slider "Score" min=0 max=10 step=1 value=7
+```
+
+## Syntax design principles
+
+The grammar is optimized for:
+
+- readability by humans
+- predictable generation by models
+- reliable parsing
+- explicit interaction intent
+
+## Common mistakes
+
+- forgetting the trailing `:` on container nodes
+- creating a `form` without a submit button
+- using `select`, `radio`, or `multiselect` without `options`
+- putting raw HTML in `text`
+- treating ToonUI like arbitrary markdown instead of a constrained language
+
+## Read next
+
+1. [Node Reference](/docs/language/node-reference)
+2. [Catalog](/docs/language/catalog)
+3. [Errors and Validation](/docs/reference/errors-and-validation)

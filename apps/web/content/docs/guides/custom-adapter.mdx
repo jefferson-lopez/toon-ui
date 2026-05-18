@@ -1,0 +1,68 @@
+---
+title: "Custom Adapter"
+description: "Override selected UI slots or enforce full design-system ownership with strict adapters."
+---
+
+Use `level: 'default'` for partial overrides and `level: 'strict'` when your design system must provide full coverage.
+
+## When to customize
+
+Customize the adapter when:
+
+- you need your own button, field, or form primitives
+- you already have a design system
+- you want to review integration completeness explicitly
+
+## Partial override
+
+Use `default` when you want ToonUI defaults plus selected replacements.
+
+```tsx
+import {
+  createToonReactAdapter,
+  createToonReactRuntime,
+  getToonButtonProps,
+  type ToonButtonComponentProps,
+} from '@toon-ui/react';
+
+function MyButton(props: ToonButtonComponentProps) {
+  return <button {...getToonButtonProps(props)}>{props.node.label}</button>;
+}
+
+const adapter = createToonReactAdapter({
+  level: 'default',
+  components: { button: MyButton },
+});
+
+const runtime = createToonReactRuntime({ adapter });
+```
+
+## Strict mode
+
+Use `strict` when defaults are NOT allowed.
+
+Strict mode throws if any required adapter key is missing. That is valuable when the design system must own the entire visual contract.
+
+## Coverage metadata
+
+The adapter exposes metadata you can inspect:
+
+```ts
+console.log(adapter.meta.level);
+console.log(adapter.meta.isComplete);
+console.log(adapter.meta.providedKeys);
+console.log(adapter.meta.missingKeys);
+```
+
+## Decision rule
+
+| Need | Recommended level |
+|---|---|
+| Replace one or two components | `default` |
+| Bring your own entire UI system | `strict` |
+| Build from scratch without defaults | `minimal` |
+
+## Read next
+
+1. [@toon-ui/react](/docs/packages/react)
+2. [React Runtime and Hooks](/docs/reference/react-runtime-and-hooks)

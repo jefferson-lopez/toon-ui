@@ -1,0 +1,256 @@
+---
+title: "Installation"
+description: "Install the right package for your integration style and understand the minimum runtime shape."
+---
+
+This page answers three practical questions:
+
+1. what packages do I actually need?
+2. where does each one live?
+3. what is the minimum correct setup?
+
+## Choose the package set first
+
+Do NOT install packages blindly.
+
+Pick the integration style you actually need:
+
+| Goal | Install |
+|---|---|
+| Fastest path | `@toon-ui/core` + `@toon-ui/toon-ui` |
+| Full React adapter ownership | `@toon-ui/core` + `@toon-ui/react` |
+| Prompt composition only | `@toon-ui/prompts` |
+| CI or fixture validation | `@toon-ui/cli` |
+
+## Recommended setups
+
+### Setup A — fastest production path
+
+Use this when:
+
+- you want to ship quickly
+- you are fine with the default adapter
+- you may customize only a few components later
+
+```bash
+pnpm add @toon-ui/core @toon-ui/toon-ui react react-dom
+```
+
+### Setup B — explicit design-system ownership
+
+Use this when:
+
+- your team already has a component system
+- you want coverage control
+- you want `minimal`, `default`, or `strict` adapter behavior
+
+```bash
+pnpm add @toon-ui/core @toon-ui/react react react-dom
+```
+
+### Setup C — prompt-only composition
+
+Use this when:
+
+- you want the prompt helpers
+- you are composing your own server instructions
+- you do not need the full client entrypoint from this package
+
+```bash
+pnpm add @toon-ui/core @toon-ui/prompts
+```
+
+## Typical install
+
+For the default end-to-end path:
+
+```bash
+pnpm add @toon-ui/core @toon-ui/toon-ui react react-dom
+```
+
+For explicit adapter control:
+
+```bash
+pnpm add @toon-ui/core @toon-ui/react react react-dom
+```
+
+For CLI validation in development or CI:
+
+```bash
+pnpm add -D @toon-ui/cli
+```
+
+## Where each package belongs
+
+| Layer | Package |
+|---|---|
+| Server | `@toon-ui/core` |
+| Client fast path | `@toon-ui/toon-ui` |
+| Client explicit path | `@toon-ui/react` |
+| Prompt composition | `@toon-ui/prompts` |
+| Tooling / CI | `@toon-ui/cli` |
+
+## Minimum server setup
+
+Your server is where the protocol starts.
+
+```ts
+import { createToonProtocol } from '@toon-ui/core';
+
+const toon = createToonProtocol();
+const system = [toon.prompt, appSpecificInstructions].join('\n\n');
+```
+
+## What `createToonProtocol()` gives you
+
+`createToonProtocol()` returns the public server contract:
+
+- `toon.prompt`
+- `toon.rules`
+- `toon.catalog`
+- `toon.events`
+- `toon.messages`
+
+That means you can both **teach** the language and **normalize** interactions with the same API family.
+
+## Server setup with real structure
+
+This is a more realistic example:
+
+```ts
+import { createToonProtocol } from '@toon-ui/core';
+
+const toon = createToonProtocol();
+
+const appInstructions = [
+  'You are helping users manage products.',
+  'Use ToonUI whenever structured UI reduces back-and-forth.',
+  'Do not invent tools or database actions.',
+].join('\n');
+
+export const systemPrompt = [
+  toon.prompt,
+  '',
+  'Available tools:',
+  '- searchProducts(query)',
+  '- createProduct(input)',
+  '- updateProductStock(productId, quantity)',
+  '',
+  appInstructions,
+].join('\n');
+```
+
+## Minimum client setup
+
+You have two main client choices.
+
+### Option 1 — `@toon-ui/toon-ui`
+
+Best when you want the shortest happy path:
+
+```tsx
+import { createToonClient } from '@toon-ui/toon-ui';
+
+const toon = createToonClient();
+```
+
+### Option 2 — `@toon-ui/react`
+
+Best when you want explicit adapter ownership:
+
+```tsx
+import { createToonReactAdapter, createToonReactRuntime } from '@toon-ui/react';
+
+const adapter = createToonReactAdapter({ level: 'default' });
+const toon = createToonReactRuntime({ adapter });
+```
+
+## What the client runtime gives you
+
+Once created, the client runtime gives you:
+
+- `toon.catalog`
+- `toon.events`
+- `toon.messages`
+- `toon.parse()`
+- `toon.validate()`
+- `toon.extractBlocks()`
+- rendering components such as `ToonMessage` or `ToonRenderer`
+
+## Minimum client setup
+
+If you want the shortest path:
+
+```tsx
+import { createToonClient } from '@toon-ui/toon-ui';
+
+const toon = createToonClient();
+```
+
+If you want explicit rendering ownership:
+
+```tsx
+import { createToonReactAdapter, createToonReactRuntime } from '@toon-ui/react';
+
+const adapter = createToonReactAdapter({ level: 'default' });
+const toon = createToonReactRuntime({ adapter });
+```
+
+## Installation in a monorepo
+
+Typical pattern:
+
+- backend package installs `@toon-ui/core`
+- frontend app installs `@toon-ui/toon-ui` or `@toon-ui/react`
+- optional tooling package installs `@toon-ui/cli`
+
+Example:
+
+```bash
+pnpm --filter @your-org/server add @toon-ui/core
+pnpm --filter @your-org/web add @toon-ui/toon-ui react react-dom
+pnpm --filter @your-org/web add -D @toon-ui/cli
+```
+
+## Common setup mistakes
+
+### Installing only the client package
+
+Wrong mindset:
+
+- “the frontend package is enough”
+
+Why it is wrong:
+
+- you still need `@toon-ui/core` for the canonical server protocol and prompt contract
+
+### Treating ToonUI as server-side business logic
+
+Wrong mindset:
+
+- “ToonUI handles workflows”
+
+Why it is wrong:
+
+- ToonUI handles language, rendering, and interaction normalization
+- your application still owns tools, auth, persistence, and domain rules
+
+### Skipping reinjection strategy
+
+If you do not decide upfront how reply/submit payloads go back into your app loop, the integration becomes messy fast.
+
+## Installation checklist
+
+- [ ] Server installs `@toon-ui/core`
+- [ ] Client installs either `@toon-ui/toon-ui` or `@toon-ui/react`
+- [ ] React peer dependency is available
+- [ ] `toon.prompt` is injected into the model system prompt
+- [ ] A runtime is created on the client
+- [ ] You have a strategy for reinjecting reply/submit payloads into app state
+
+## Read next
+
+1. [Quickstart](/docs/getting-started/quickstart)
+2. [Configuration](/docs/getting-started/configuration)
+3. [Mental Model](/docs/concepts/mental-model)
+4. [Boundaries](/docs/architecture/boundaries)

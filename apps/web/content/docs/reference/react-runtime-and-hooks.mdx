@@ -1,0 +1,242 @@
+---
+title: "React Runtime and Hooks"
+description: "Detailed reference for the React runtime, adapters, provider, hooks, and rendering helpers."
+---
+
+This is where ToonUI stops being only a protocol and becomes a React integration.
+
+## `createToonReactRuntime()`
+
+Creates the React runtime.
+
+```tsx
+const runtime = createToonReactRuntime({ adapter });
+```
+
+The returned runtime includes:
+
+- protocol APIs from `@toon-ui/core`
+- adapter metadata
+- layout configuration
+- rendering utilities
+
+## `createToonReactAdapter()`
+
+Creates an adapter contract around your component registry.
+
+```tsx
+const adapter = createToonReactAdapter({
+  level: 'default',
+  components: {
+    button: MyButton,
+  },
+});
+```
+
+## Adapter levels
+
+### `minimal`
+
+Only the components you provide are registered.
+
+Use it when:
+
+- you are building from scratch
+- you do not want ToonUI defaults
+
+### `default`
+
+Merges the built-in preset with your overrides.
+
+Use it when:
+
+- you want the fastest customization path
+- you only need to replace a few slots
+
+### `strict`
+
+Requires full adapter coverage.
+
+If any adapter key is missing, `assertToonReactAdapter()` throws.
+
+Use it when:
+
+- your design system must own the entire rendering surface
+- incomplete registration should fail fast
+
+## Adapter metadata
+
+Every adapter exposes `meta`:
+
+- `level`
+- `includesDefaults`
+- `isComplete`
+- `providedKeys`
+- `missingKeys`
+
+This is valuable in code review because it makes integration completeness inspectable.
+
+## `getToonAdapterCoverage()`
+
+Computes coverage metadata for a registry.
+
+Use it when you want to evaluate:
+
+- what was registered
+- what is still missing
+- whether strict coverage is satisfied
+
+## `mergeToonComponentRegistry()`
+
+Merges multiple partial registries into one.
+
+Useful for:
+
+- preset + design-system overrides
+- composition across internal UI modules
+
+## `ToonProvider`
+
+Provides runtime and rendering context.
+
+It owns:
+
+- form state
+- block resolution state
+- interaction dispatch
+
+```tsx
+<ToonProvider runtime={runtime} onReply={...} onSubmit={...}>
+  {children}
+</ToonProvider>
+```
+
+## `interactive`
+
+`ToonProvider` accepts `interactive?: boolean`.
+
+When disabled:
+
+- blocks are treated as already resolved
+- interactions no longer behave as active input surfaces
+
+That can be useful for:
+
+- replay views
+- read-only history rendering
+
+## Hooks
+
+### `useToonUI()`
+
+Returns the current `ToonReactRuntime`.
+
+Use it when a child component needs direct runtime access.
+
+### `useToonReply()`
+
+Returns the reply dispatcher from render context.
+
+### `useToonSubmit()`
+
+Returns the submit dispatcher from render context.
+
+### `useToonAction()`
+
+Returns:
+
+- `events`
+- `messages`
+
+This hook mirrors the protocol mental model and is useful when your component wants the interaction APIs without manually threading them through props.
+
+## Rendering helpers
+
+### `getToonFieldId()`
+
+Builds a deterministic field id from field name and source line.
+
+Useful for:
+
+- label/input association
+- stable form wiring
+
+### `getToonButtonProps()`
+
+Returns normalized button props:
+
+- `type`
+- `disabled`
+- `onClick`
+
+It centralizes the logic for:
+
+- reply actions
+- submit actions
+- disabled handling
+
+### `getToonInputProps()`
+
+Returns normalized props for input-like controls.
+
+It handles:
+
+- `id`
+- `name`
+- `type`
+- `required`
+- `disabled`
+- `placeholder`
+- `value`
+- `onChange`
+
+It also normalizes numeric input behavior.
+
+### `getToonTextareaProps()`
+
+Equivalent helper for textarea wiring.
+
+### `getToonCheckboxProps()`
+
+Equivalent helper for checkbox wiring.
+
+## `extractToonMarkdown()`
+
+Strips `toon-ui` fenced blocks from mixed markdown content.
+
+Use it when you want to render narrative prose separately from the structured UI.
+
+## `ToonRenderer`
+
+Renders parsed ToonUI structure.
+
+Use it when:
+
+- you already separated the content
+- you want direct control over renderer placement
+
+## `ToonMessage`
+
+High-level component that renders assistant content containing normal markdown plus ToonUI blocks.
+
+Use it when you want the best default integration path.
+
+## `basicPreset()`
+
+Returns the built-in default React component registry used by the default adapter path.
+
+Use it when you want:
+
+- reference behavior
+- default fallback rendering
+- a base layer for selective overrides
+
+## Layout options
+
+`createToonReactRuntime()` accepts:
+
+- `messageGap`
+- `blockGap`
+- `nodeGap`
+
+These control spacing without forcing you to rewrite the rendering logic.

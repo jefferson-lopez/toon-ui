@@ -1,0 +1,112 @@
+---
+title: "Overview"
+description: "What ToonUI is, when to use it, and how the project is organized."
+---
+
+ToonUI lets a model answer with normal markdown plus fenced `toon-ui` blocks.
+
+The important architectural rule is this:
+
+> The model describes **UI intent**, but your application still owns business logic, tools, transport, persistence, auth, and safety boundaries.
+
+That separation is the whole point.
+
+## What problem ToonUI solves
+
+Most AI UI demos mix three different concerns into one fragile layer:
+
+1. prompt instructions
+2. rendering primitives
+3. application behavior
+
+That usually creates hidden coupling:
+
+- prompts start carrying business logic they should not own
+- frontend rendering becomes tied to one demo implementation
+- user actions are hard to convert back into structured app events
+
+ToonUI separates those concerns into explicit packages and APIs.
+
+## What ToonUI is made of
+
+| Package | Responsibility | Use it when |
+|---|---|---|
+| `@toon-ui/core` | Protocol, catalog, parser, validation, prompts, events, messages | You need the server-side contract |
+| `@toon-ui/react` | Explicit React runtime and adapter layer | You want to control rendering ownership |
+| `@toon-ui/toon-ui` | Main public client package with default adapter | You want the fastest path |
+| `@toon-ui/prompts` | Prompt helpers only | You want custom prompt composition |
+| `@toon-ui/cli` | Validation and AST inspection in the terminal | You want CI or debugging support |
+
+## Quick path
+
+1. Create a protocol on the server with `createToonProtocol()`.
+2. Inject `toon.prompt` into your system prompt.
+3. Create a client runtime with `createToonClient()` or `createToonReactRuntime()`.
+4. Render assistant output with `ToonMessage` or `ToonRenderer`.
+5. Reinject user interactions with `toon.messages.toUIMessage(payload)` or `toon.messages.toModelMessage(payload)`.
+
+## End-to-end mental model
+
+Think about ToonUI as a pipeline:
+
+1. **Rules**: your server teaches the model the language
+2. **Output**: the model emits markdown plus `toon-ui` blocks
+3. **Parsing**: ToonUI extracts and parses those blocks
+4. **Validation**: the AST is checked against the official catalog
+5. **Rendering**: React components render the structured nodes
+6. **Interaction**: button clicks and form submits become typed payloads
+7. **Reinjection**: those payloads go back into your chat/application loop
+
+## What ToonUI owns vs what your app owns
+
+| ToonUI owns | Your app owns |
+|---|---|
+| UI language | Tools and side effects |
+| Parser and validator | Auth and permissions |
+| Prompt composition helpers | Persistence |
+| Rendering runtime | API calls |
+| Event/message conversion | Business rules |
+| Adapter contract | Final product decisions |
+
+## Recommended starting point
+
+If you are new to the project, start here:
+
+1. Read [Installation](/docs/getting-started/installation)
+2. Complete [Quickstart](/docs/getting-started/quickstart)
+3. Study the [Mental Model](/docs/concepts/mental-model)
+4. Learn the [Syntax](/docs/language/syntax)
+5. Choose your package in [Packages](/docs/packages/toon-ui)
+
+## Recommended reading order
+
+The docs are now organized as a learning path:
+
+1. **Getting Started** — install and ship the first integration
+2. **Concepts** — understand the mental model before touching customization
+3. **Architecture** — learn what ToonUI owns and what your app must own
+4. **Language** — learn the syntax and node semantics
+5. **Packages** — choose the right implementation entrypoint
+6. **Guides** — apply the model in real integration patterns
+7. **Reference** — deep API details for implementation work
+
+## If you only have 15 minutes
+
+Read these pages in order:
+
+1. [Quickstart](/docs/getting-started/quickstart)
+2. [Mental Model](/docs/concepts/mental-model)
+3. [Boundaries](/docs/architecture/boundaries)
+4. [Syntax](/docs/language/syntax)
+5. [@toon-ui/toon-ui](/docs/packages/toon-ui)
+
+## If you are deciding as a team
+
+Use this order instead:
+
+1. [Overview](/docs)
+2. [Boundaries](/docs/architecture/boundaries)
+3. [Package Architecture](/docs/architecture/package-architecture)
+4. [@toon-ui/toon-ui](/docs/packages/toon-ui)
+5. [@toon-ui/react](/docs/packages/react)
+6. [Protocol and Types](/docs/reference/protocol-and-types)

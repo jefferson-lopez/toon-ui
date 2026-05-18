@@ -1,0 +1,81 @@
+---
+title: "@toon-ui/core"
+description: "Protocol foundation: catalog, parser, validation, prompts, and event/message conversion."
+---
+
+`@toon-ui/core` is the protocol foundation of the whole ecosystem.
+
+Use it whenever you need the **language contract**, not the React rendering layer.
+
+## What it owns
+
+- official catalog
+- parsing
+- validation
+- prompt generation
+- reply and submit event creation
+- message conversion back into your app/model loop
+
+## Main exports
+
+- `createToonProtocol()`
+- `createToonCatalog()`
+- `TOON_CATALOG`
+- `parseToonUI()`
+- `validateToonUI()`
+- `extractToonBlocks()`
+- `createPrompt()`
+- `createComponentPrompt()`
+- `createSyntaxPrompt()`
+- `createFallbackPrompt()`
+- `createSafetyPrompt()`
+- `createExamplesPrompt()`
+- `createRules()`
+- `createToonCoreRuntime()`
+
+## Recommended server usage
+
+```ts
+import { createToonProtocol } from '@toon-ui/core';
+
+const toon = createToonProtocol();
+const system = [toon.prompt, 'Available tools:', '- searchProducts(query)'].join('\n\n');
+```
+
+## Public API shape
+
+```ts
+const toon = createToonProtocol();
+
+toon.catalog.components.form.syntax;
+toon.events.reply('Open details');
+toon.events.submit('create_product', { name: 'Coca-Cola' });
+toon.messages.toContent(payload);
+toon.messages.toModelMessage(payload);
+toon.messages.toUIMessage(payload);
+```
+
+## Why this package matters
+
+This package keeps the protocol model EXPLICIT:
+
+- `catalog` = language definition
+- `events` = interaction payload creation
+- `messages` = reinjection into the host loop
+
+That separation is what makes ToonUI teachable and testable.
+
+## Boundary
+
+`@toon-ui/core` does NOT render React.
+
+If you need rendering, pair it with:
+
+- `@toon-ui/react` for explicit adapters
+- `@toon-ui/toon-ui` for the simplest public client path
+
+## Read next
+
+- [Protocol and Types](/docs/reference/protocol-and-types)
+- [Events and Messages](/docs/reference/events-and-messages)
+- [Errors and Validation](/docs/reference/errors-and-validation)

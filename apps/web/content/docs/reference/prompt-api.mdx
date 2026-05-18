@@ -1,0 +1,149 @@
+---
+title: "Prompt API"
+description: "Detailed reference for prompt helper functions and how they compose the ToonUI instruction set."
+---
+
+The prompt layer matters because ToonUI is not only a parser.
+
+It is also a TEACHING SYSTEM for the model.
+
+## Main prompt helpers
+
+The code exposes these key helpers:
+
+- `createPrompt(rules)`
+- `createComponentPrompt(rules)`
+- `createSyntaxPrompt()`
+- `createFallbackPrompt()`
+- `createSafetyPrompt()`
+- `createExamplesPrompt()`
+
+`@toon-ui/prompts` currently re-exports:
+
+- `createPrompt`
+- `createComponentPrompt`
+- `createSafetyPrompt`
+- `createExamplesPrompt`
+
+## `createPrompt(rules)`
+
+This is the full high-level prompt composition function.
+
+It builds one instruction set that includes:
+
+- component rules
+- syntax rules
+- interaction rules
+- composition guidance
+- form best practices
+- fallback rules
+- safety rules
+- UI decision policy
+- self-check reminders
+- valid/invalid examples
+
+Use it when you want the canonical ToonUI prompt.
+
+## `createComponentPrompt(rules)`
+
+Lists the allowed language surface:
+
+- components
+- button variants
+- badge variants
+- alert variants
+- confirm variants
+- field types
+- chart types
+
+This is the compact “what exists” section.
+
+## `createSyntaxPrompt()`
+
+Documents canonical syntax rules extracted from the official catalog.
+
+It reinforces:
+
+- valid structural syntax
+- quoted title requirements
+- table quoting requirements
+- specific node constraints such as badge restrictions
+
+Use it when you want to emphasize generation correctness.
+
+## `createFallbackPrompt()`
+
+Defines what the model should do when uncertain.
+
+This is IMPORTANT because robust systems do not only define the happy path.
+They define safe fallback behavior.
+
+Examples of the fallback policy:
+
+- prefer a smaller safe subset of components
+- do not invent unsupported components
+- do not improvise invalid nesting
+
+## `createSafetyPrompt()`
+
+Defines the hard guardrails.
+
+It tells the model:
+
+- output markdown plus `toon-ui` blocks only
+- never output React/HTML/CSS/JS
+- never invent components or props
+- never emit raw HTML or script-like content
+- never execute business actions directly
+
+This is one of the most important prompt layers in the whole system.
+
+## `createExamplesPrompt()`
+
+Provides:
+
+- valid examples
+- invalid examples to avoid
+
+This matters because examples reduce ambiguity for model generation.
+
+## Why prompt composition is split
+
+The helpers are separated so you can:
+
+- use the canonical full prompt
+- assemble your own prompt strategy
+- emphasize specific constraints in certain host applications
+
+That is a better architecture than a single opaque string constant.
+
+## Recommended usage
+
+### Canonical path
+
+```ts
+import { createToonProtocol } from '@toon-ui/core';
+
+const toon = createToonProtocol();
+const system = [toon.prompt, appSpecificInstructions].join('\n\n');
+```
+
+### Custom path
+
+```ts
+import { createRules } from '@toon-ui/core';
+import { createPrompt, createSafetyPrompt } from '@toon-ui/prompts';
+
+const rules = createRules();
+const system = [createPrompt(rules), createSafetyPrompt(), appSpecificInstructions].join('\n\n');
+```
+
+## Practical guidance
+
+If you are unsure, use the canonical protocol prompt first.
+
+Customize later ONLY when you understand:
+
+- what constraint you are changing
+- what generation behavior you expect to improve
+- what safety/consistency tradeoff you are accepting

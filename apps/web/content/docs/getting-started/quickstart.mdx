@@ -1,0 +1,260 @@
+---
+title: "Quickstart"
+description: "The shortest end-to-end path from server prompt to rendered UI and interaction reinjection."
+---
+
+This page shows the real happy path:
+
+1. create the protocol on the server
+2. inject the prompt into the model
+3. render assistant output on the client
+4. capture reply/submit interactions
+5. reinsert those interactions into your app loop
+
+## End-to-end flow
+
+```ts
+import { createToonProtocol } from '@toon-ui/core';
+
+const protocol = createToonProtocol();
+const system = [protocol.prompt, 'Available tools:', '- searchProducts(query)'].join('\n\n');
+```
+
+```tsx
+'use client';
+
+import { ToonMessage, createToonClient } from '@toon-ui/toon-ui';
+
+const toon = createToonClient();
+
+export function AssistantMessage({
+  content,
+  append,
+}: {
+  content: string;
+  append: (message: unknown) => void;
+}) {
+  return (
+    <ToonMessage
+      content={content}
+      runtime={toon}
+      onReply={(payload) => append(toon.messages.toUIMessage(payload))}
+      onSubmit={(payload) => append(toon.messages.toUIMessage(payload))}
+    />
+  );
+}
+```
+
+## Full example with server and client
+
+### Server
+
+```ts
+import { createToonProtocol } from '@toon-ui/core';
+
+const toon = createToonProtocol();
+
+export async function buildMessages(userInput: string) {
+  return [
+    {
+      role: 'system',
+      content: [
+        toon.prompt,
+        'You are assisting with product search and creation.',
+        'Use ToonUI when structured UI reduces friction.',
+        'Available tools:',
+        '- searchProducts(query)',
+        '- createProduct(input)',
+      ].join('\n\n'),
+    },
+    {
+      role: 'user',
+      content: userInput,
+    },
+  ];
+}
+```
+
+### Client
+
+```tsx
+'use client';
+
+import { useState } from 'react';
+import { ToonMessage, createToonClient, type ToonChatUIMessage } from '@toon-ui/toon-ui';
+
+const toon = createToonClient();
+
+export function ChatExample({
+  assistantContent,
+}: {
+  assistantContent: string;
+}) {
+  const [messages, setMessages] = useState<ToonChatUIMessage[]>([]);
+
+  function append(message: ToonChatUIMessage) {
+    setMessages((current) => [...current, message]);
+  }
+
+  return (
+    <div>
+      <ToonMessage
+        content={assistantContent}
+        runtime={toon}
+        onReply={(payload) => append(toon.messages.toUIMessage(payload))}
+        onSubmit={(payload) => append(toon.messages.toUIMessage(payload))}
+      />
+
+      <pre>{JSON.stringify(messages, null, 2)}</pre>
+    </div>
+  );
+}
+```
+
+## What happens in this example
+
+1. The server creates the protocol.
+2. The protocol prompt teaches the model the ToonUI language.
+3. The model returns markdown plus fenced `toon-ui` blocks.
+4. `ToonMessage` renders those blocks.
+5. Clicking a button or submitting a form emits a structured payload.
+6. `toon.messages.toUIMessage(payload)` converts that payload back into message state your app can append.
+
+## Example model output
+
+````md
+I found one matching product.
+
+```toon-ui
+card "Product found":
+  text "Toon Mug"
+  badge "In stock" success
+  button secondary "Open details" reply="open:toon-mug"
+```
+````
+
+## Reply and submit reinjection
+
+You usually have two reinjection targets:
+
+| API | Use it when |
+|---|---|
+| `toon.messages.toUIMessage(payload)` | Your chat UI stores message objects/parts |
+| `toon.messages.toModelMessage(payload)` | Your app needs the normalized content string for the model loop |
+
+## Reinjection with model loop
+
+If your next step is sending the interaction back to the LLM:
+
+```ts
+onReply={(payload) => {
+  const message = toon.messages.toModelMessage(payload);
+  sendToModel(message);
+}}
+```
+
+The returned object includes:
+
+- `content` — normalized compact user intent
+- `displayContent` — UI-friendly display text
+- `payload` — original typed payload
+
+## Rendering narrative markdown separately
+
+If you want to render normal markdown outside the structured block:
+
+```tsx
+import { ToonRenderer, createToonClient, extractToonMarkdown } from '@toon-ui/toon-ui';
+
+const toon = createToonClient();
+
+const plainMarkdown = extractToonMarkdown(content);
+```
+
+Use this when:
+
+- your app renders assistant prose in one area
+- the ToonUI block should appear in a dedicated panel or section
+
+## Validation before trusting generated output
+
+If you are building a stricter pipeline:
+
+```ts
+const blocks = toon.extractBlocks(content);
+
+for (const block of blocks) {
+  const ast = toon.parse(block.raw);
+  const result = toon.validate(ast);
+
+  if (!result.ok) {
+    console.error(result.errors);
+  }
+}
+```
+
+This is especially useful for:
+
+- testing
+- fixtures
+- debugging model output
+- server-side safety checks
+
+## Quickstart with explicit React adapter
+
+If you want adapter ownership from day one:
+
+```tsx
+import {
+  ToonMessage,
+  createToonReactAdapter,
+  createToonReactRuntime,
+  getToonButtonProps,
+  type ToonButtonComponentProps,
+} from '@toon-ui/react';
+
+function MyButton(props: ToonButtonComponentProps) {
+  return <button {...getToonButtonProps(props)}>{props.node.label}</button>;
+}
+
+const adapter = createToonReactAdapter({
+  level: 'default',
+  components: {
+    button: MyButton,
+  },
+});
+
+const toon = createToonReactRuntime({ adapter });
+```
+
+## What you should have working after this page
+
+- [ ] server prompt includes `toon.prompt`
+- [ ] client runtime is created
+- [ ] assistant content renders through `ToonMessage` or `ToonRenderer`
+- [ ] reply actions produce payloads
+- [ ] form submits produce payloads
+- [ ] your app can convert payloads into UI messages or model messages
+
+## What NOT to do
+
+Do NOT put business logic inside the ToonUI block.
+
+Bad mindset:
+
+- “the model executes the workflow”
+
+Correct mindset:
+
+- “the model describes an interaction surface”
+- “the host app decides what the interaction actually does”
+
+## Next step
+
+After this works, read:
+
+- [Mental Model](/docs/concepts/mental-model)
+- [Boundaries](/docs/architecture/boundaries)
+- [Configuration](/docs/getting-started/configuration)
+- [Syntax](/docs/language/syntax)
+- [Events and Messages](/docs/reference/events-and-messages)

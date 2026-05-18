@@ -1,0 +1,83 @@
+---
+title: "Catalog"
+description: "The current official component catalog exposed by @toon-ui/core."
+---
+
+The official catalog comes from `@toon-ui/core` and defines what the language supports today.
+
+## Component groups
+
+| Group | Components |
+|---|---|
+| Content | `text`, `heading`, `separator`, `badge` |
+| Structure | `card`, `list`, `item`, `table`, `empty`, `tabs`, `accordion` |
+| Capture | `form`, `field`, `button`, `confirm` |
+| Overlay | `dialog`, `sheet`, `popover`, `tooltip` |
+| Feedback | `alert`, `progress`, `loading`, `toast` |
+| Navigation | `breadcrumb`, `pagination`, `menu`, `command` |
+| Analytics | `chart` |
+
+## Official components
+
+- `text`
+- `heading`
+- `separator`
+- `card`
+- `form`
+- `field`
+- `button`
+- `confirm`
+- `list`
+- `item`
+- `badge`
+- `alert`
+- `table`
+- `empty`
+- `tabs`
+- `accordion`
+- `dialog`
+- `sheet`
+- `popover`
+- `tooltip`
+- `progress`
+- `loading`
+- `toast`
+- `breadcrumb`
+- `pagination`
+- `menu`
+- `command`
+- `chart`
+
+## Variants and type families
+
+| Family | Values |
+|---|---|
+| Button variants | `primary`, `secondary`, `danger`, `ghost`, `outline` |
+| Badge variants | `success`, `warning`, `danger`, `neutral`, `info` |
+| Alert variants | `info`, `success`, `warning`, `danger` |
+| Confirm variants | `neutral`, `info`, `warning`, `danger`, `success` |
+| Chart types | `bar`, `line`, `area`, `pie` |
+| Sheet sides | `left`, `right`, `top`, `bottom` |
+| Separator orientations | `horizontal`, `vertical` |
+
+## Field types
+
+`text`, `email`, `number`, `password`, `date`, `time`, `textarea`, `select`, `checkbox`, `radio`, `switch`, `combobox`, `otp`, `slider`, `multiselect`
+
+## Important modeling rule
+
+The catalog defines the **language**, not your product semantics.
+
+For example:
+
+- `form` means “collect structured input”
+- `button` means “trigger interaction”
+- `reply="open:customer-42"` is your app-level intent encoding
+
+The catalog should stay generic. Your app decides what those actions mean.
+
+## Read next
+
+1. [@toon-ui/toon-ui](/docs/packages/toon-ui)
+2. [Protocol and Types](/docs/reference/protocol-and-types)
+3. [Errors and Validation](/docs/reference/errors-and-validation)

@@ -1,0 +1,352 @@
+---
+title: "Node Reference"
+description: "Detailed reference for the main ToonUI nodes, what they mean, and when to use them."
+---
+
+This page is about SEMANTICS, not just syntax.
+
+The important question is not only “how do I write this node?” but also:
+
+- what problem does it solve?
+- when should the model choose it?
+- what should your host app expect from it?
+
+## Content nodes
+
+### `text`
+
+Use `text` for normal visible copy.
+
+```txt
+text "Customer created successfully."
+```
+
+Use it for:
+
+- explanations
+- supporting copy
+- details inside cards, alerts, dialogs, and list items
+
+Do NOT use it for:
+
+- raw HTML
+- styling instructions
+- fake components embedded inside prose
+
+### `heading`
+
+Use `heading` for hierarchy inside richer layouts.
+
+```txt
+heading 2 "Customer details"
+```
+
+Good use cases:
+
+- sections inside cards
+- long structured results
+- dialogs or sheets with multiple subsections
+
+### `separator`
+
+Use `separator` to break visually dense content into scannable sections.
+
+```txt
+separator
+separator vertical
+```
+
+## Structure nodes
+
+### `card`
+
+The general-purpose container.
+
+```txt
+card "Customer found":
+  text "Jefferson Lopez Mendoza"
+  badge "Active" success
+  button secondary "View history" reply="view-history"
+```
+
+Use `card` when:
+
+- one entity is the focus
+- you need contextual actions close to the data
+- the response should feel self-contained
+
+### `list`
+
+Use `list` for repeated structured entries.
+
+```txt
+list "Products":
+  item "Toon Mug":
+    text "Ceramic mug"
+```
+
+A `list` must contain `item` nodes only.
+
+### `item`
+
+An `item` is one entry inside a `list`.
+
+Use it when each row/entity needs:
+
+- description
+- status
+- actions
+
+### `table`
+
+Use `table` for precise comparisons and exact values.
+
+```txt
+table "Sales":
+  columns: "Date", "Sale number", "Total", "Status"
+  row: "May 14", "S-001", "$25.00", "Paid"
+```
+
+Prefer `table` over `list` when:
+
+- columns matter
+- users need exact values
+- side-by-side comparison is important
+
+### `empty`
+
+Use `empty` for zero-result states.
+
+```txt
+empty "No customers found":
+  text "Try another search term."
+  button secondary "Search again" reply="search-again"
+```
+
+This is BETTER than plain prose because it gives a semantic empty-state structure.
+
+### `tabs`
+
+Use `tabs` when information belongs to parallel sections.
+
+Typical use:
+
+- summary vs details
+- profile vs history
+- analytics vs raw data
+
+### `accordion`
+
+Use `accordion` when the content is dense and progressive disclosure helps.
+
+Typical use:
+
+- FAQs
+- advanced configuration
+- grouped detail sections
+
+## Capture nodes
+
+### `form`
+
+Use `form` when the user must provide structured input.
+
+```txt
+form "Create product":
+  field name text "Name" required
+  field price number "Price" required
+  button primary "Create product" submit
+```
+
+A `form` must include:
+
+- a title
+- at least one `field`
+- at least one submit `button`
+
+### `field`
+
+Use `field` for structured input inside forms.
+
+Supported field types include:
+
+- `text`
+- `email`
+- `number`
+- `password`
+- `date`
+- `time`
+- `textarea`
+- `select`
+- `checkbox`
+- `radio`
+- `switch`
+- `combobox`
+- `otp`
+- `slider`
+- `multiselect`
+
+Important rules:
+
+- `select`, `radio`, and `multiselect` need `options`
+- `slider` needs `min` and `max`
+- `required` should be used only when truly necessary
+
+### `button`
+
+Use `button` for explicit interaction triggers.
+
+```txt
+button primary "Create product" submit
+button secondary "Open details" reply="open:product-42"
+```
+
+Buttons always need:
+
+- variant
+- label
+- `reply="..."` or `submit`
+
+### `confirm`
+
+Use `confirm` for user confirmation flows.
+
+```txt
+confirm danger "Delete customer?":
+  text "This action cannot be undone."
+  button secondary "Cancel" reply="cancel"
+  button danger "Delete" reply="delete-customer"
+```
+
+Variant guidance:
+
+- `danger` for destructive actions
+- `warning` for risky actions
+- `neutral` for standard confirmations
+
+## Feedback nodes
+
+### `badge`
+
+Use `badge` for short status labels.
+
+```txt
+badge "Active" success
+```
+
+### `alert`
+
+Use `alert` for important callouts.
+
+```txt
+alert warning "Inventory mismatch":
+  text "The counted stock does not match the expected total."
+```
+
+### `progress`
+
+Use `progress` for deterministic progress state.
+
+```txt
+progress "Uploading files" value=2 max=5
+```
+
+### `loading`
+
+Use `loading` for temporary system state.
+
+```txt
+loading "Searching products..."
+```
+
+### `toast`
+
+Use `toast` for short result feedback.
+
+```txt
+toast success "Customer created successfully."
+```
+
+## Overlay nodes
+
+### `dialog`
+
+Use `dialog` for modal interactions.
+
+### `sheet`
+
+Use `sheet` for side-attached contextual UI.
+
+```txt
+sheet "Filters" side="right":
+  text "Choose the filters to apply."
+```
+
+### `popover`
+
+Use `popover` for small inline contextual overlays.
+
+### `tooltip`
+
+Use `tooltip` for brief hints only.
+
+## Navigation nodes
+
+### `breadcrumb`
+
+Use `breadcrumb` to show hierarchical location.
+
+```txt
+breadcrumb:
+  crumb "Customers" reply="go:customers"
+  crumb "Jefferson Lopez"
+```
+
+### `pagination`
+
+Use `pagination` when results span multiple pages.
+
+```txt
+pagination page=2 totalPages=7
+```
+
+### `menu`
+
+Use `menu` when the user needs a semantic list of actions.
+
+### `command`
+
+Use `command` when the interaction resembles a command palette or compact action launcher.
+
+## Analytics nodes
+
+### `chart`
+
+Use `chart` for trends and comparisons, not raw precision first.
+
+Typical use:
+
+- sales trends
+- comparisons across periods
+- distribution snapshots
+
+If the user needs precise cell-by-cell values, pair a chart with a `table`.
+
+## Decision checklist
+
+Choose:
+
+- `card` for one focused entity
+- `list` for repeated entities
+- `table` for precise comparison
+- `form` for structured input
+- `confirm` for confirmation flows
+- `alert` for important state
+- `empty` for zero results
+- `chart` for trends
+
+## Read next
+
+1. [Catalog](/docs/language/catalog)
+2. [@toon-ui/toon-ui](/docs/packages/toon-ui)
+3. [Events and Messages](/docs/reference/events-and-messages)

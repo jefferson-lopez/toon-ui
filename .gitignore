@@ -5,3 +5,5 @@ dist
 .DS_Store
 .npm-cache
 .pnpm-store
+apps/web/.next
+apps/web/.source

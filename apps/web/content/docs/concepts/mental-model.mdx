@@ -1,0 +1,100 @@
+---
+title: "Mental Model"
+description: "The conceptual model you should teach before talking about styling or components."
+---
+
+If you teach ToonUI starting from buttons, fields, or CSS, you are teaching it backwards.
+
+Teach THESE objects first:
+
+- `toon.catalog`
+- `toon.events`
+- `toon.messages`
+- `toon.parse()`
+- `toon.validate()`
+- `toon.extractBlocks()`
+
+The runtime owns UI intent. The host app owns business behavior.
+
+## The three layers
+
+| Layer | Meaning | Owned by |
+|---|---|---|
+| Language | What the model is allowed to emit | `@toon-ui/core` |
+| Rendering | How structured nodes become React UI | `@toon-ui/react` or `@toon-ui/toon-ui` |
+| Behavior | What happens after user interaction | Your app |
+
+## The public objects
+
+### `toon.catalog`
+
+This is the language contract:
+
+- available components
+- supported variants
+- supported field types
+- examples of valid and invalid output
+
+Use it when you need inspectable documentation or tooling around the language.
+
+### `toon.events`
+
+This is the interaction creation API.
+
+Use it to build normalized reply or submit payloads:
+
+- `toon.events.reply(...)`
+- `toon.events.submit(...)`
+
+### `toon.messages`
+
+This is the reinjection API.
+
+Use it to convert interaction payloads into:
+
+- compact content strings for the model
+- display content for UI
+- UI message objects for chat state
+
+### `toon.parse()`
+
+Parses a ToonUI document into an AST.
+
+Use it when:
+
+- debugging generation
+- building tooling
+- validating fixtures before rendering
+
+### `toon.validate()`
+
+Validates the AST against syntax and semantic rules.
+
+Use it before trusting generated structure.
+
+### `toon.extractBlocks()`
+
+Separates fenced `toon-ui` blocks from normal markdown content.
+
+Use it when you need to render narrative copy and structured UI together.
+
+## The most important boundary
+
+ToonUI is NOT an application framework.
+
+It does not own:
+
+- data fetching
+- authorization
+- mutations
+- persistence
+- tool execution
+- product decisions
+
+It gives you a typed UI language and a safe interaction loop.
+
+## Read next
+
+1. [Boundaries](/docs/architecture/boundaries)
+2. [Syntax](/docs/language/syntax)
+3. [@toon-ui/toon-ui](/docs/packages/toon-ui)

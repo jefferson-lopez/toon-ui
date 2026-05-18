@@ -1,0 +1,71 @@
+---
+title: "Events and Messages"
+description: "Reply and submit payloads, plus the message formats ToonUI generates for your host app."
+---
+
+The interaction APIs are the bridge between rendered UI and your application loop.
+
+## Key APIs
+
+- `toon.events.reply()`
+- `toon.events.submit()`
+- `toon.messages.toContent()`
+- `toon.messages.toDisplayContent()`
+- `toon.messages.toModelMessage()`
+- `toon.messages.toUIMessage()`
+
+## Reply payload
+
+Reply events are button-style interactions.
+
+```ts
+const payload = toon.events.reply('Open customer');
+```
+
+The payload includes:
+
+- `kind: 'ui_reply'`
+- `eventId`
+- `source`
+- `component`
+- `value`
+- optional `context`
+
+## Submit payload
+
+Submit events are form-style interactions.
+
+```ts
+const payload = toon.events.submit('create_product', {
+  name: 'Coca-Cola',
+  price: 25.5,
+});
+```
+
+The payload includes:
+
+- `kind: 'ui_submit'`
+- `eventId`
+- `source`
+- `intent`
+- `formTitle`
+- `values`
+
+## Message conversion APIs
+
+| API | Result |
+|---|---|
+| `toContent(payload)` | Compact normalized content string |
+| `toDisplayContent(payload)` | Human-readable display text |
+| `toModelMessage(payload)` | Structured model-facing message object |
+| `toUIMessage(payload)` | UI-friendly message object with `parts` and `metadata` |
+
+## Why this layer exists
+
+Without this layer, interaction reinjection becomes inconsistent across apps.
+
+ToonUI gives you one normalized contract so:
+
+- buttons and forms behave predictably
+- the model loop receives stable content
+- your UI state can append interaction messages consistently

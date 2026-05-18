@@ -1,0 +1,62 @@
+---
+title: "Errors and Validation"
+description: "Validation issue codes and the contract around safe parsing and rendering."
+---
+
+Validation is what stops ToonUI from becoming “just parse whatever string came back.”
+
+## Validation issue codes
+
+Current issue codes:
+
+- `INVALID_COMPONENT`
+- `INVALID_PROP`
+- `INVALID_VARIANT`
+- `MISSING_REQUIRED_FIELD`
+- `INVALID_NESTING`
+- `INVALID_SYNTAX`
+- `UNSAFE_CONTENT`
+
+## What validation checks
+
+- required fields exist
+- variants belong to the official catalog
+- nesting rules are respected
+- forms include fields and a submit button
+- list-like structures contain valid child node types
+- tables keep column and row counts aligned
+- unsafe raw HTML/script-like content is rejected in text nodes
+
+## Examples
+
+### Missing required field
+
+```txt
+form "Create product":
+  button primary "Create" submit
+```
+
+This is invalid because a form must include at least one field.
+
+### Invalid nesting
+
+```txt
+list "Products":
+  text "This is not allowed directly inside list"
+```
+
+This is invalid because lists can only contain `item` nodes.
+
+### Unsafe content
+
+```txt
+text "<script>alert('xss')</script>"
+```
+
+This is invalid because raw script-like HTML is not allowed in text nodes.
+
+## Practical recommendation
+
+Treat parsing and validation as part of the contract, not as optional polish.
+
+If the host app cares about reliability, it MUST validate generated structure before trusting it.

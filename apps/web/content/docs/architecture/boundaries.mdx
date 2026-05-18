@@ -1,0 +1,44 @@
+---
+title: "Boundaries"
+description: "What ToonUI owns and what must stay in the host application."
+---
+
+The main architectural mistake people make is trying to turn ToonUI into an app framework.
+
+It is NOT.
+
+## Ownership boundaries
+
+| ToonUI owns | Host app owns |
+|---|---|
+| Protocol and grammar | Business workflows |
+| Parser and validator | Tool execution |
+| Prompt helpers | Auth and authorization |
+| Rendering primitives | Persistence |
+| Adapter contract | API orchestration |
+| Event/message conversion | Domain rules |
+
+## Why this boundary matters
+
+If prompts start deciding product behavior, you lose:
+
+- testability
+- security clarity
+- maintainable architecture
+
+The model should describe an interaction surface.
+Your application should decide what that interaction means.
+
+## Good boundary example
+
+- model emits `button secondary "Open" reply="open:customer-42"`
+- ToonUI renders the button
+- user clicks it
+- your app receives a structured reply payload
+- your app decides whether to fetch, reject, log, or transform that action
+
+## Read next
+
+1. [Package Architecture](/docs/architecture/package-architecture)
+2. [Syntax](/docs/language/syntax)
+3. [@toon-ui/toon-ui](/docs/packages/toon-ui)

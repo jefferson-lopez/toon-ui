@@ -1,0 +1,51 @@
+---
+title: "Vercel AI SDK"
+description: "Recommended host-first integration pattern with useChat-style message state."
+---
+
+The important rule with Vercel AI SDK is simple:
+
+> Let the model generate ToonUI, but let your app keep the chat state and side effects.
+
+## Recommended pattern
+
+Use `toon.messages.toUIMessage(payload)` to append structured user intent back into `useChat`-style state.
+
+```tsx
+onReply={(payload) => {
+  const next = toon.messages.toUIMessage(payload);
+  append(next);
+}}
+```
+
+## Why this matters
+
+This keeps three things separate:
+
+- the model output
+- the rendered interaction surface
+- the app-owned message loop
+
+## When to use `toModelMessage`
+
+If your host loop expects a compact normalized user message for the next model turn, use:
+
+```ts
+const next = toon.messages.toModelMessage(payload);
+```
+
+That gives you:
+
+- `content` for the model
+- `displayContent` for UI
+- the original typed `payload`
+
+## Practical rule
+
+- use `toUIMessage()` for UI state
+- use `toModelMessage()` for LLM loop integration
+
+## Read next
+
+1. [Events and Messages](/docs/reference/events-and-messages)
+2. [React Runtime and Hooks](/docs/reference/react-runtime-and-hooks)

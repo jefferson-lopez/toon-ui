@@ -1,0 +1,56 @@
+---
+title: "Package Architecture"
+description: "How the public packages fit together in the recommended integration model."
+---
+
+Recommended composition:
+
+- `@toon-ui/core` on the server
+- `@toon-ui/toon-ui` for the default client path
+- `@toon-ui/react` when you need explicit adapter ownership
+
+## Recommended package map
+
+| Layer | Package | Why |
+|---|---|---|
+| Server protocol | `@toon-ui/core` | Defines the language and interaction contracts |
+| Client convenience | `@toon-ui/toon-ui` | Gives you the fastest public entry point |
+| Client explicit integration | `@toon-ui/react` | Lets you own adapter coverage intentionally |
+| Prompt-only composition | `@toon-ui/prompts` | Useful when you only need prompt text helpers |
+| CLI tooling | `@toon-ui/cli` | Useful for validation and AST debugging |
+
+## Default composition
+
+This is the best starting point for most apps:
+
+```txt
+server -> @toon-ui/core
+client -> @toon-ui/toon-ui
+```
+
+## Explicit composition
+
+Choose this when your frontend team owns a design system:
+
+```txt
+server -> @toon-ui/core
+client -> @toon-ui/react
+adapter -> your component layer
+```
+
+## Design principle
+
+The packages are split by responsibility, not by marketing.
+
+That means:
+
+- server concerns stay on the server
+- rendering concerns stay on the client
+- prompt helpers can be consumed independently
+- validation tooling can live in CI without leaking into runtime
+
+## Read next
+
+1. [@toon-ui/toon-ui](/docs/packages/toon-ui)
+2. [@toon-ui/react](/docs/packages/react)
+3. [Protocol and Types](/docs/reference/protocol-and-types)

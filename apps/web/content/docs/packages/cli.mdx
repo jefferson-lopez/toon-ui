@@ -1,0 +1,38 @@
+---
+title: "@toon-ui/cli"
+description: "Terminal tooling for validation and AST inspection."
+---
+
+`@toon-ui/cli` gives you terminal tooling for validation and AST inspection.
+
+Use it for CI, fixtures, and debugging generated output.
+
+## Commands
+
+```bash
+toon-ui validate example.toon
+toon-ui inspect example.toon
+```
+
+## What each command does
+
+| Command | Purpose |
+|---|---|
+| `toon-ui validate <file>` | Parses and validates ToonUI, then exits non-zero on invalid output |
+| `toon-ui inspect <file>` | Prints the parsed AST as JSON |
+
+## Typical workflow
+
+1. Save a generated `toon-ui` block into a fixture file
+2. Run `toon-ui validate fixture.toon`
+3. If needed, run `toon-ui inspect fixture.toon`
+4. Fix the prompt or the generated structure
+
+## Boundary
+
+This package does NOT belong in browser runtime code.
+
+Pair it with:
+
+- `@toon-ui/core` for protocol/runtime utilities
+- `@toon-ui/react` or `@toon-ui/toon-ui` for actual rendering
