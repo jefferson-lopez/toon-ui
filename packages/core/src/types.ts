@@ -1,67 +1,36 @@
-export const OFFICIAL_COMPONENT_KEYS = [
-  'text',
-  'heading',
-  'separator',
-  'card',
-  'form',
-  'field',
-  'button',
-  'confirm',
-  'list',
-  'item',
-  'badge',
-  'alert',
-  'table',
-  'empty',
-  'tabs',
-  'accordion',
-  'dialog',
-  'sheet',
-  'popover',
-  'tooltip',
-  'progress',
-  'loading',
-  'toast',
-  'breadcrumb',
-  'pagination',
-  'menu',
-  'command',
-  'chart',
-] as const;
-export const BUTTON_VARIANTS = ['primary', 'secondary', 'danger', 'ghost', 'outline'] as const;
-export const BADGE_VARIANTS = ['success', 'warning', 'danger', 'neutral', 'info'] as const;
-export const ALERT_VARIANTS = ['info', 'success', 'warning', 'danger'] as const;
-export const CONFIRM_VARIANTS = ['neutral', 'info', 'warning', 'danger', 'success'] as const;
-export const FIELD_TYPES = [
-  'text',
-  'email',
-  'number',
-  'password',
-  'date',
-  'time',
-  'textarea',
-  'select',
-  'checkbox',
-  'radio',
-  'switch',
-  'combobox',
-  'otp',
-  'slider',
-  'multiselect',
-] as const;
-export const CHART_TYPES = ['bar', 'line', 'area', 'pie'] as const;
-export const SHEET_SIDES = ['left', 'right', 'top', 'bottom'] as const;
-export const SEPARATOR_ORIENTATIONS = ['horizontal', 'vertical'] as const;
+import {
+  TOON_ALERT_VARIANTS,
+  TOON_BADGE_VARIANTS,
+  TOON_BUTTON_VARIANTS,
+  TOON_CATALOG,
+  TOON_CHART_TYPES,
+  TOON_COMPONENT_KEYS,
+  TOON_CONFIRM_VARIANTS,
+  TOON_FIELD_TYPES,
+  TOON_SEPARATOR_ORIENTATIONS,
+  TOON_SHEET_SIDES,
+  type ToonCatalog,
+} from './catalog';
 
-export type ToonComponentKey = (typeof OFFICIAL_COMPONENT_KEYS)[number];
-export type ButtonVariant = (typeof BUTTON_VARIANTS)[number];
-export type BadgeVariant = (typeof BADGE_VARIANTS)[number];
-export type AlertVariant = (typeof ALERT_VARIANTS)[number];
-export type ConfirmVariant = (typeof CONFIRM_VARIANTS)[number];
-export type FieldType = (typeof FIELD_TYPES)[number];
-export type ChartType = (typeof CHART_TYPES)[number];
-export type SheetSide = (typeof SHEET_SIDES)[number];
-export type SeparatorOrientation = (typeof SEPARATOR_ORIENTATIONS)[number];
+export const OFFICIAL_COMPONENT_KEYS = TOON_COMPONENT_KEYS;
+export const BUTTON_VARIANTS = TOON_BUTTON_VARIANTS;
+export const BADGE_VARIANTS = TOON_BADGE_VARIANTS;
+export const ALERT_VARIANTS = TOON_ALERT_VARIANTS;
+export const CONFIRM_VARIANTS = TOON_CONFIRM_VARIANTS;
+export const FIELD_TYPES = TOON_FIELD_TYPES;
+export const CHART_TYPES = TOON_CHART_TYPES;
+export const SHEET_SIDES = TOON_SHEET_SIDES;
+export const SEPARATOR_ORIENTATIONS = TOON_SEPARATOR_ORIENTATIONS;
+
+export type ToonComponentKey = (typeof TOON_COMPONENT_KEYS)[number];
+export type ButtonVariant = (typeof TOON_BUTTON_VARIANTS)[number];
+export type BadgeVariant = (typeof TOON_BADGE_VARIANTS)[number];
+export type AlertVariant = (typeof TOON_ALERT_VARIANTS)[number];
+export type ConfirmVariant = (typeof TOON_CONFIRM_VARIANTS)[number];
+export type FieldType = (typeof TOON_FIELD_TYPES)[number];
+export type ChartType = (typeof TOON_CHART_TYPES)[number];
+export type SheetSide = (typeof TOON_SHEET_SIDES)[number];
+export type SeparatorOrientation = (typeof TOON_SEPARATOR_ORIENTATIONS)[number];
 export type SubmitScalar = string | number | boolean;
 export type SubmitValue = SubmitScalar | SubmitScalar[];
 
@@ -395,7 +364,7 @@ export interface SubmitPayload {
 
 export type ToonInteractionPayload = ReplyPayload | SubmitPayload;
 
-export interface ToonChatMessage<TPayload extends ToonInteractionPayload = ToonInteractionPayload> {
+export interface ToonModelMessage<TPayload extends ToonInteractionPayload = ToonInteractionPayload> {
   role: 'user';
   kind: TPayload['kind'];
   content: string;
@@ -403,30 +372,44 @@ export interface ToonChatMessage<TPayload extends ToonInteractionPayload = ToonI
   payload: TPayload;
 }
 
-export interface ToonChatUIMessageMetadata<TPayload extends ToonInteractionPayload = ToonInteractionPayload> {
+export interface ToonUIMessageMetadata<TPayload extends ToonInteractionPayload = ToonInteractionPayload> {
   displayContent: string;
   kind: TPayload['kind'];
 }
 
-export interface ToonChatUIMessagePart {
+export interface ToonUIMessagePart {
   type: 'text';
   text: string;
 }
 
-export interface ToonChatUIMessage<TPayload extends ToonInteractionPayload = ToonInteractionPayload> {
+export interface ToonUIMessage<TPayload extends ToonInteractionPayload = ToonInteractionPayload> {
   id: string;
   role: 'user';
-  parts: [ToonChatUIMessagePart];
-  metadata: ToonChatUIMessageMetadata<TPayload>;
+  parts: [ToonUIMessagePart];
+  metadata: ToonUIMessageMetadata<TPayload>;
+}
+
+export type ToonChatMessage<TPayload extends ToonInteractionPayload = ToonInteractionPayload> = ToonModelMessage<TPayload>;
+export type ToonChatUIMessage<TPayload extends ToonInteractionPayload = ToonInteractionPayload> = ToonUIMessage<TPayload>;
+
+export interface ToonEventsApi {
+  reply: typeof import('./runtime').createReplyEvent;
+  submit: typeof import('./runtime').createSubmitEvent;
+}
+
+export interface ToonMessagesApi {
+  toContent: typeof import('./runtime').toToonEventContent;
+  toDisplayContent: typeof import('./runtime').toToonDisplayContent;
+  toModelMessage: typeof import('./runtime').toToonModelMessage;
+  toUIMessage: typeof import('./runtime').toToonUIMessage;
 }
 
 export interface ToonProtocol {
   prompt: string;
   rules: ToonRules;
-  formatSubmitMessage: typeof import('./runtime').formatSubmitMessage;
-  formatReplyMessage: typeof import('./runtime').formatReplyMessage;
-  createChatMessage: typeof import('./runtime').createChatMessage;
-  createChatUIMessage: typeof import('./runtime').createChatUIMessage;
+  catalog: ToonCatalog;
+  events: ToonEventsApi;
+  messages: ToonMessagesApi;
 }
 
 export type ToonComponentRegistry = Partial<{ [K in keyof ToonNodeByType]: unknown }>;
@@ -441,3 +424,5 @@ export interface ToonRuntime<TComponents extends ToonComponentRegistry = ToonCom
   validate: typeof import('./validator').validateToonUI;
   extractBlocks: typeof import('./formatter').extractToonBlocks;
 }
+
+export const toonCatalog = TOON_CATALOG;

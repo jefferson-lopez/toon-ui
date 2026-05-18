@@ -37,8 +37,6 @@ export interface ToonRenderContextValue {
   setFieldValue: (form: FormNode | undefined, field: FieldNode, value: ToonFieldValue) => void;
   isBlockResolved: (blockId: string) => boolean;
   resolveBlock: (blockId: string) => void;
-  formatSubmitMessage: ToonRuntime['formatSubmitMessage'];
-  formatReplyMessage: ToonRuntime['formatReplyMessage'];
 }
 
 type BaseProps<TNode extends ToonNode> = {
@@ -86,9 +84,45 @@ export interface ToonReactComponentPropsByType {
   table: ToonTableComponentProps;
 }
 
+export const TOON_REACT_ADAPTER_KEYS = [
+  'text',
+  'card',
+  'form',
+  'field',
+  'button',
+  'confirm',
+  'list',
+  'item',
+  'badge',
+  'alert',
+  'table',
+] as const;
+
+export type ToonReactAdapterComponentKey = (typeof TOON_REACT_ADAPTER_KEYS)[number];
+
 export type ToonReactComponentRegistry = Partial<{
   [K in keyof ToonReactComponentPropsByType]: React.ComponentType<ToonReactComponentPropsByType[K]>;
 }>;
+
+export type ToonReactAdapterLevel = 'minimal' | 'default' | 'strict';
+
+export interface ToonReactAdapterMeta {
+  level: ToonReactAdapterLevel;
+  includesDefaults: boolean;
+  isComplete: boolean;
+  providedKeys: ToonReactAdapterComponentKey[];
+  missingKeys: ToonReactAdapterComponentKey[];
+}
+
+export interface ToonReactAdapter {
+  components: ToonReactComponentRegistry;
+  meta: ToonReactAdapterMeta;
+}
+
+export interface CreateToonReactAdapterOptions {
+  components?: ToonReactComponentRegistry;
+  level?: ToonReactAdapterLevel;
+}
 
 export interface ToonReactLayoutOptions {
   messageGap?: React.CSSProperties['gap'];
@@ -97,7 +131,7 @@ export interface ToonReactLayoutOptions {
 }
 
 export interface CreateToonReactRuntimeOptions {
-  components?: ToonReactComponentRegistry;
+  adapter?: ToonReactAdapter;
   layout?: ToonReactLayoutOptions;
 }
 
@@ -108,6 +142,7 @@ interface ResolvedToonReactLayout {
 }
 
 export type ToonReactRuntime = ToonRuntime<ToonReactComponentRegistry> & {
+  adapter: ToonReactAdapter;
   layout: ResolvedToonReactLayout;
 };
 export type ToonMarkdownRenderer = (markdown: string) => React.ReactNode;
@@ -130,6 +165,60 @@ const defaultLayout: ResolvedToonReactLayout = {
   nodeGap: 12,
 };
 
+export function mergeToonComponentRegistry(...registries: Array<ToonReactComponentRegistry | undefined>): ToonReactComponentRegistry {
+  return registries.reduce<ToonReactComponentRegistry>((accumulator, registry) => ({
+    ...accumulator,
+    ...(registry ?? {}),
+  }), {});
+}
+
+function createAdapterErrorMessage(missingKeys: ToonReactAdapterComponentKey[]): string {
+  return `Strict ToonUI adapter requires full coverage. Missing components: ${missingKeys.join(', ')}`;
+}
+
+export function getToonAdapterCoverage(
+  components: ToonReactComponentRegistry,
+  level: ToonReactAdapterLevel = 'minimal',
+): ToonReactAdapterMeta {
+  const providedKeys = TOON_REACT_ADAPTER_KEYS.filter((key) => Boolean(components[key]));
+  const missingKeys = TOON_REACT_ADAPTER_KEYS.filter((key) => !components[key]);
+  const isComplete = missingKeys.length === 0;
+
+  return {
+    level,
+    includesDefaults: level === 'default',
+    isComplete,
+    providedKeys: [...providedKeys],
+    missingKeys: [...missingKeys],
+  };
+}
+
+export function assertToonReactAdapter(adapter: ToonReactAdapter): ToonReactAdapter {
+  if (adapter.meta.level === 'strict' && !adapter.meta.isComplete) {
+    throw new Error(createAdapterErrorMessage(adapter.meta.missingKeys));
+  }
+
+  return adapter;
+}
+
+export function createToonReactAdapter(
+  options: CreateToonReactAdapterOptions = {},
+): ToonReactAdapter {
+  const level = options.level ?? 'default';
+  const components = level === 'default'
+    ? mergeToonComponentRegistry(basicPreset(), options.components)
+    : mergeToonComponentRegistry(options.components);
+
+  const adapter = {
+    components,
+    meta: getToonAdapterCoverage(components, level),
+  } satisfies ToonReactAdapter;
+
+  return assertToonReactAdapter(adapter);
+}
+
+export const createToonAdapter = createToonReactAdapter;
+
 export function createToonReactRuntime(
   options: CreateToonReactRuntimeOptions = {},
 ): ToonReactRuntime {
@@ -139,10 +228,13 @@ export function createToonReactRuntime(
     nodeGap: options.layout?.nodeGap ?? defaultLayout.nodeGap,
   };
 
+  const adapter = options.adapter ?? createToonReactAdapter({ level: 'default' });
+
   return {
     ...createToonCoreRuntime<ToonReactComponentRegistry>({
-      components: options.components,
+      components: adapter.components,
     }),
+    adapter,
     layout,
   } as ToonReactRuntime;
 }
@@ -350,8 +442,6 @@ export function ToonProvider({
     resolveBlock: (blockId) => {
       setResolvedBlocks((current) => (current[blockId] ? current : { ...current, [blockId]: true }));
     },
-    formatSubmitMessage: runtime.formatSubmitMessage,
-    formatReplyMessage: runtime.formatReplyMessage,
   }), [formState, interactive, onReply, onSubmit, resolvedBlocks, runtime]);
 
   return (
@@ -388,8 +478,8 @@ export function useToonSubmit() {
 export function useToonAction() {
   const runtime = useToonUI();
   return {
-    formatSubmitMessage: runtime.formatSubmitMessage,
-    formatReplyMessage: runtime.formatReplyMessage,
+    events: runtime.events,
+    messages: runtime.messages,
   };
 }
 

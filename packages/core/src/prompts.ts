@@ -1,3 +1,4 @@
+import { TOON_CATALOG } from './catalog';
 import type { ToonRules } from './types';
 
 export function createComponentPrompt(rules: ToonRules): string {
@@ -13,37 +14,14 @@ export function createComponentPrompt(rules: ToonRules): string {
 }
 
 export function createSyntaxPrompt(): string {
-  return [
-    'Canonical syntax rules:',
-    '- text MUST be: text "Visible text"',
-    '- card MUST be: card "Title": followed by indented child nodes',
-    '- form MUST be: form "Title": followed by one or more field nodes and one submit button',
-    '- field MUST be: field <name> <fieldType> "Label" [placeholder="..."] [required]',
-    '- button MUST be: button <variant> "Label" reply="Value" OR button <variant> "Label" submit',
-    '- confirm MUST be: confirm <variant> "Title": followed by indented child nodes',
-    '- list MUST be: list "Title": followed only by item nodes',
-    '- item MUST be: item "Title": followed by indented child nodes',
-    '- badge MUST be: badge "Label" <variant>',
-    '- alert MUST be: alert <variant> "Title": followed by indented child nodes',
-    '- table MUST be: table "Title": followed by columns: ... and one or more row: ... lines',
-    '- heading MUST be: heading <1-6> "Visible text"',
-    '- separator MUST be: separator OR separator horizontal|vertical',
-    '- empty MUST be: empty "Title": followed by indented child nodes',
-    '- tabs MUST be: tabs "Title": followed by one or more tab "Label": blocks',
-    '- accordion MUST be: accordion "Title": followed by one or more section "Title": blocks',
-    '- dialog, sheet, and popover MUST be: <component> "Title": followed by indented child nodes',
-    '- tooltip MUST be: tooltip "Visible text"',
-    '- progress MUST be: progress "Label" value=<number> max=<number>',
-    '- loading MUST be: loading "Visible text"',
-    '- toast MUST be: toast <variant> "Visible text"',
-    '- breadcrumb MUST be: breadcrumb: followed by one or more crumb "Label" [reply="..."] lines',
-    '- pagination MUST be: pagination page=<number> totalPages=<number>',
-    '- menu and command MUST be: <component> "Title": followed by one or more action "Label" reply="..." or submit lines',
-    '- chart MUST be: chart <type> "Title": followed by one or more series "Label": blocks with point "Label" <number> rows',
-    '- In tables, quote every column name and every row cell, especially when values may contain commas like currency or large numbers',
-    '- card, form, confirm, list, item, alert, and table ALWAYS require a quoted title',
-    '- badge NEVER has children and NEVER has a title prop',
-  ].join('\n');
+  const lines = ['Canonical syntax rules:'];
+  for (const entry of Object.values(TOON_CATALOG.components)) {
+    lines.push(`- ${entry.syntax}`);
+  }
+  lines.push('- In tables, quote every column name and every row cell, especially when values may contain commas like currency or large numbers');
+  lines.push('- card, form, confirm, list, item, alert, and table ALWAYS require a quoted title');
+  lines.push('- badge NEVER has children and NEVER has a title prop');
+  return lines.join('\n');
 }
 
 export function createFallbackPrompt(): string {
@@ -139,92 +117,10 @@ export function createSelfCheckPrompt(): string {
 }
 
 export function createExamplesPrompt(): string {
-  return [
-    'Valid examples:',
-    '```toon-ui',
-    'form "Create product":',
-    '  field name text "Name" placeholder="Ex: Coca-Cola" required',
-    '  field price number "Price" placeholder="Ex: 25.50" required',
-    '  button primary "Create product" submit',
-    '```',
-    '',
-    '```toon-ui',
-    'card "Customer found":',
-    '  text "Jefferson Lopez Mendoza"',
-    '  badge "Active" success',
-    '  button secondary "View history" reply="View customer history"',
-    '```',
-    '',
-    '```toon-ui',
-    'confirm danger "Delete customer?":',
-    '  text "This action cannot be undone."',
-    '  button secondary "Cancel" reply="Cancel"',
-    '  button danger "Yes, delete" reply="Yes, delete customer"',
-    '```',
-    '',
-    '```toon-ui',
-    'confirm neutral "Continue with selected customer?":',
-    '  text "We will use this customer for the current sale."',
-    '  button secondary "Cancel" reply="Cancel"',
-    '  button primary "Continue" reply="Continue with selected customer"',
-    '```',
-    '',
-    '```toon-ui',
-    'table "Sales":',
-    '  columns: "Date", "Sale number", "Total", "Status"',
-    '  row: "May 14", "177877222574876", "$ 387.45", "Completed"',
-    '  row: "May 09", "177836532655064", "$ 8,155.35", "Completed"',
-    '```',
-    '',
-    '```toon-ui',
-    'alert warning "Low stock":',
-    '  text "Only 3 units remain in the warehouse."',
-    '```',
-    '',
-    '```toon-ui',
-    'empty "No customers found":',
-    '  text "Try another search term or create a new customer."',
-    '  button secondary "Create customer" reply="Create customer"',
-    '```',
-    '',
-    '```toon-ui',
-    'progress "Inventory sync" value=65 max=100',
-    '```',
-    '',
-    '```toon-ui',
-    'pagination page=2 totalPages=8',
-    '```',
-    '',
-    '```toon-ui',
-    'chart bar "Weekly sales" x="Day" y="Revenue":',
-    '  series "Store A":',
-    '    point "Mon" 1200',
-    '    point "Tue" 980',
-    '```',
-    '',
-    '```toon-ui',
-    'form "Create product":',
-    '  field name text "Name" placeholder="Ex: Coca-Cola" required',
-    '  field sku text "SKU" placeholder="Ex: COCA-355" required',
-    '  field price number "Price" placeholder="Ex: 25.50" required',
-    '  field cost number "Cost" placeholder="Ex: 12.00" required',
-    '  field stock number "Initial stock" placeholder="Ex: 50" required',
-    '  button primary "Create product" submit',
-    '```',
-    '',
-    'Invalid examples to avoid:',
-    '- header "Customer"  -> INVALID because header is not an allowed component',
-    '- card:             -> INVALID because card requires a quoted title',
-    '- badge success "Customer" -> INVALID because badge syntax is badge "Label" variant',
-    '- alert "Low stock" -> INVALID because alert requires a variant and nested block',
-    '- empty "No data" -> INVALID because empty requires a nested block after :',
-    '- progress 65 -> INVALID because progress requires a quoted label plus value= and max=',
-    '- pagination 2/8 -> INVALID because pagination requires page= and totalPages=',
-    '- confirm "Delete customer?": -> VALID for backward compatibility, but prefer confirm danger|warning|neutral "Title":',
-    '- form "Customer": with no submit button -> INVALID',
-    '- row: May 09, $ 8,155.35, Completed -> RISKY because commas inside values can break the table unless cells are quoted',
-    '- "Do you want me to build a UI for this?" -> BAD when a form, confirm, table, list, or card is already the obvious best response',
-  ].join('\n');
+  const validExamples = TOON_CATALOG.examples.valid.flatMap((example) => ['```toon-ui', example, '```', '']);
+  const invalidExamples = TOON_CATALOG.examples.invalid.map((example) => `- ${example}`);
+
+  return ['Valid examples:', ...validExamples, 'Invalid examples to avoid:', ...invalidExamples].join('\n');
 }
 
 export function createPrompt(rules: ToonRules): string {

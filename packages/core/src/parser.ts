@@ -1,5 +1,5 @@
+import { TOON_COMPONENT_KEYS as OFFICIAL_COMPONENT_KEYS } from './catalog';
 import {
-  OFFICIAL_COMPONENT_KEYS,
   type ActionNode,
   type AccordionNode,
   type AlertNode,

@@ -1,8 +1,28 @@
+import { TOON_CATALOG } from './catalog';
 import { createPrompt } from './prompts';
 import { parseToonUI } from './parser';
 import { validateToonUI } from './validator';
 import { extractToonBlocks } from './formatter';
-import { ALERT_VARIANTS, BADGE_VARIANTS, BUTTON_VARIANTS, CHART_TYPES, CONFIRM_VARIANTS, FIELD_TYPES, OFFICIAL_COMPONENT_KEYS, type CreateToonUIOptions, type ReplyPayload, type SubmitPayload, type ToonChatMessage, type ToonChatUIMessage, type ToonComponentRegistry, type ToonInteractionPayload, type ToonProtocol, type ToonRules, type ToonRuntime } from './types';
+import {
+  ALERT_VARIANTS,
+  BADGE_VARIANTS,
+  BUTTON_VARIANTS,
+  CHART_TYPES,
+  CONFIRM_VARIANTS,
+  FIELD_TYPES,
+  OFFICIAL_COMPONENT_KEYS,
+  type CreateToonUIOptions,
+  type ReplyPayload,
+  type SubmitPayload,
+  type ToonChatMessage,
+  type ToonChatUIMessage,
+  type ToonComponentRegistry,
+  type ToonInteractionPayload,
+  type ToonMessagesApi,
+  type ToonProtocol,
+  type ToonRules,
+  type ToonRuntime,
+} from './types';
 
 function createEventId(prefix: string): string {
   return `${prefix}_${Math.random().toString(36).slice(2, 10)}`;
@@ -30,27 +50,8 @@ export function createRules(): ToonRules {
   };
 }
 
-export function formatSubmitMessage(intentOrPayload: string | SubmitPayload, values?: Record<string, string | number | boolean>): string {
-  const payload: SubmitPayload = typeof intentOrPayload === 'string'
-    ? {
-        kind: 'ui_submit',
-        eventId: createEventId('submit'),
-        source: 'form',
-        intent: intentOrPayload,
-        formTitle: intentOrPayload,
-        values: values ?? {},
-      }
-    : intentOrPayload;
-
-  const lines = ['ui_submit:', `  eventId: ${payload.eventId}`, `  intent: ${payload.intent}`, `  formTitle: ${payload.formTitle}`];
-  Object.entries(payload.values).forEach(([key, value]) => {
-    lines.push(`  ${key}: ${JSON.stringify(value)}`);
-  });
-  return lines.join('\n');
-}
-
-export function formatReplyMessage(valueOrPayload: string | ReplyPayload, metadata: Record<string, string | number | boolean> = {}): string {
-  const payload: ReplyPayload = typeof valueOrPayload === 'string'
+export function createReplyEvent(valueOrPayload: string | ReplyPayload, metadata: Record<string, string | number | boolean> = {}): ReplyPayload {
+  return typeof valueOrPayload === 'string'
     ? {
         kind: 'ui_reply',
         eventId: createEventId('reply'),
@@ -60,10 +61,33 @@ export function formatReplyMessage(valueOrPayload: string | ReplyPayload, metada
         context: metadata,
       }
     : valueOrPayload;
+}
 
-  const lines = ['ui_reply:', `  eventId: ${payload.eventId}`, `  value: ${payload.value}`, `  source: ${payload.source}`, `  component: ${payload.component}`];
-  Object.entries(payload.context ?? {}).forEach(([key, entry]) => {
-    lines.push(`  ${key}: ${JSON.stringify(entry)}`);
+export function createSubmitEvent(intentOrPayload: string | SubmitPayload, values?: Record<string, string | number | boolean>): SubmitPayload {
+  return typeof intentOrPayload === 'string'
+    ? {
+        kind: 'ui_submit',
+        eventId: createEventId('submit'),
+        source: 'form',
+        intent: intentOrPayload,
+        formTitle: intentOrPayload,
+        values: values ?? {},
+      }
+    : intentOrPayload;
+}
+
+export function toToonEventContent(payload: ToonInteractionPayload): string {
+  if (payload.kind === 'ui_reply') {
+    const lines = ['ui_reply:', `  eventId: ${payload.eventId}`, `  value: ${payload.value}`, `  source: ${payload.source}`, `  component: ${payload.component}`];
+    Object.entries(payload.context ?? {}).forEach(([key, entry]) => {
+      lines.push(`  ${key}: ${JSON.stringify(entry)}`);
+    });
+    return lines.join('\n');
+  }
+
+  const lines = ['ui_submit:', `  eventId: ${payload.eventId}`, `  intent: ${payload.intent}`, `  formTitle: ${payload.formTitle}`];
+  Object.entries(payload.values).forEach(([key, value]) => {
+    lines.push(`  ${key}: ${JSON.stringify(value)}`);
   });
   return lines.join('\n');
 }
@@ -85,28 +109,22 @@ function createSubmitDisplayContent(payload: SubmitPayloadWithOptionalNode): str
   return [payload.formTitle, ...entries].join('\n');
 }
 
-export function createChatMessage<TPayload extends ToonInteractionPayload>(payload: TPayload): ToonChatMessage<TPayload> {
-  if (payload.kind === 'ui_reply') {
-    return {
-      role: 'user',
-      kind: payload.kind,
-      content: formatReplyMessage(payload),
-      displayContent: payload.value,
-      payload,
-    };
-  }
+export function toToonDisplayContent<TPayload extends ToonInteractionPayload>(payload: TPayload): string {
+  return payload.kind === 'ui_reply' ? payload.value : createSubmitDisplayContent(payload);
+}
 
+export function toToonModelMessage<TPayload extends ToonInteractionPayload>(payload: TPayload): ToonChatMessage<TPayload> {
   return {
     role: 'user',
     kind: payload.kind,
-    content: formatSubmitMessage(payload),
-    displayContent: createSubmitDisplayContent(payload),
+    content: toToonEventContent(payload),
+    displayContent: toToonDisplayContent(payload),
     payload,
   };
 }
 
-export function createChatUIMessage<TPayload extends ToonInteractionPayload>(payload: TPayload): ToonChatUIMessage<TPayload> {
-  const message = createChatMessage(payload);
+export function toToonUIMessage<TPayload extends ToonInteractionPayload>(payload: TPayload): ToonChatUIMessage<TPayload> {
+  const message = toToonModelMessage(payload);
 
   return {
     id: payload.eventId,
@@ -119,16 +137,28 @@ export function createChatUIMessage<TPayload extends ToonInteractionPayload>(pay
   };
 }
 
+function createMessagesApi(): ToonMessagesApi {
+  return {
+    toContent: toToonEventContent,
+    toDisplayContent: toToonDisplayContent,
+    toModelMessage: toToonModelMessage,
+    toUIMessage: toToonUIMessage,
+  };
+}
+
 export function createToonProtocol(): ToonProtocol {
   const rules = createRules();
+  const messages = createMessagesApi();
 
   return {
     prompt: createPrompt(rules),
     rules,
-    formatSubmitMessage,
-    formatReplyMessage,
-    createChatMessage,
-    createChatUIMessage,
+    catalog: TOON_CATALOG,
+    events: {
+      reply: createReplyEvent,
+      submit: createSubmitEvent,
+    },
+    messages,
   };
 }
 

@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { ALERT_VARIANTS, BADGE_VARIANTS, BUTTON_VARIANTS, CHART_TYPES, CONFIRM_VARIANTS, FIELD_TYPES, SEPARATOR_ORIENTATIONS, SHEET_SIDES, type ActionNode, type ChartNode, type ConfirmNode, type CrumbNode, type FieldNode, type ToonDocument, type ToonNode, type ValidationIssue, type ValidationResult } from './types';
+import { TOON_ALERT_VARIANTS as ALERT_VARIANTS, TOON_BADGE_VARIANTS as BADGE_VARIANTS, TOON_BUTTON_VARIANTS as BUTTON_VARIANTS, TOON_CHART_TYPES as CHART_TYPES, TOON_CONFIRM_VARIANTS as CONFIRM_VARIANTS, TOON_FIELD_TYPES as FIELD_TYPES, TOON_SEPARATOR_ORIENTATIONS as SEPARATOR_ORIENTATIONS, TOON_SHEET_SIDES as SHEET_SIDES } from './catalog';
+import { type ActionNode, type ChartNode, type ConfirmNode, type CrumbNode, type FieldNode, type ToonDocument, type ToonNode, type ValidationIssue, type ValidationResult } from './types';
 
 const buttonVariantSchema = z.enum(BUTTON_VARIANTS);
 const badgeVariantSchema = z.enum(BADGE_VARIANTS);

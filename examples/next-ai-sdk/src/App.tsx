@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { ToonMessage, createToonRuntime } from "@toon-ui/toon-ui";
+import { ToonMessage, createToonClient } from "@toon-ui/toon-ui";
 import type { ToonReplyPayload, ToonSubmitPayload } from "@toon-ui/toon-ui";
 import {
   createHostMessage,
@@ -7,7 +7,7 @@ import {
   type HostMessage,
 } from "./chat-loop";
 
-const toon = createToonRuntime();
+const toon = createToonClient();
 
 const initialMessages: HostMessage[] = [
   createHostMessage(
@@ -24,7 +24,7 @@ const initialMessages: HostMessage[] = [
 function surfaceEvent(
   toonEvent: ToonReplyPayload | ToonSubmitPayload,
 ): HostMessage {
-  const message = toon.createChatMessage(toonEvent);
+  const message = toon.messages.toModelMessage(toonEvent);
   return createHostMessage(
     message.role,
     message.content,

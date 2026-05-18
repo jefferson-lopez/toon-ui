@@ -8,7 +8,7 @@ The MVP is now registry-first, not preset-first.
 
 - `@toon-ui/core` owns grammar, AST, validation, and protocol formatting.
 - `@toon-ui/react` walks the AST and resolves registered components by `node.type`.
-- `@toon-ui/toon-ui` injects `basicPreset()` by default and merges developer overrides on top, so missing components still render.
+- `@toon-ui/toon-ui` now creates a default adapter and lets developers replace pieces explicitly through `createToonAdapter()` / `createToonClient({ adapter })`.
 - The component catalog is closed for the MVP.
 - `meta` is removed from the official grammar and runtime surface.
 

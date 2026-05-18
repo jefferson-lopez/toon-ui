@@ -1,195 +1,65 @@
 # @toon-ui/core
 
-`@toon-ui/core` is the server and protocol foundation of ToonUI.
+`@toon-ui/core` is the protocol foundation of ToonUI.
 
-Use it when you need:
+Use it when you need the server model, the central catalog, parsing, validation, or event/message conversion.
 
-- `createToonProtocol()` on the server
-- prompt generation
-- parsing and validation
-- interaction payload formatting
-- chat-ready interaction messages
+## Quick path
 
----
-
-## Install
-
-```bash
-pnpm add @toon-ui/core
-```
-
----
+1. Create a protocol with `createToonProtocol()`.
+2. Feed `toon.prompt` into your system prompt.
+3. Use `toon.catalog`, `toon.events`, and `toon.messages` as the public API.
 
 ## Main exports
 
 - `createToonProtocol()`
-- `createToonCoreRuntime()` low-level runtime
+- `createToonCatalog()`
+- `TOON_CATALOG`
 - `parseToonUI()`
 - `validateToonUI()`
 - `extractToonBlocks()`
-- `formatReplyMessage()`
-- `formatSubmitMessage()`
-- `createChatMessage()`
-- `createChatUIMessage()`
-- `createPrompt()`
+- `toToonEventContent()`
 
----
-
-## Server integration
-
-This is the PRIMARY use case.
+## Recommended server usage
 
 ```ts
 import { createToonProtocol } from '@toon-ui/core';
-import { streamText } from 'ai';
-import { openai } from '@ai-sdk/openai';
 
 const toon = createToonProtocol();
+const system = [toon.prompt, 'Available tools:', '- searchProducts(query)'].join('
 
-const system = [
-  toon.prompt,
-  'Available tools:',
-  '- searchProducts(query)',
-  '- createProduct(name, price, stock)',
-].join('\n\n');
-
-export async function POST(req: Request) {
-  const { messages } = await req.json();
-
-  const result = streamText({
-    model: openai('gpt-4.1'),
-    system,
-    messages,
-    tools: {
-      searchProducts: async ({ query }) => ({ ok: true, query }),
-      createProduct: async ({ name, price, stock }) => ({ ok: true, name, price, stock }),
-    },
-  });
-
-  return result.toUIMessageStreamResponse();
-}
+');
 ```
 
-What `createToonProtocol()` gives you:
-
-- `prompt`
-- `rules`
-- `formatReplyMessage()`
-- `formatSubmitMessage()`
-- `createChatMessage()`
-
----
-
-## Frontend integration
-
-`@toon-ui/core` is NOT the recommended frontend renderer package.
-
-Use it on the frontend only if you are building custom tooling or your own renderer.
+## Public API shape
 
 ```ts
-import { extractToonBlocks, parseToonUI, validateToonUI } from '@toon-ui/core';
+const toon = createToonProtocol();
 
-const blocks = extractToonBlocks(content);
-const ast = parseToonUI(blocks[0].raw);
-const result = validateToonUI(ast);
+toon.catalog.components.form.syntax;
+toon.events.reply('Open details');
+toon.events.submit('create_product', { name: 'Coca-Cola' });
+toon.messages.toContent(payload);
+toon.messages.toModelMessage(payload);
+toon.messages.toUIMessage(payload);
 ```
 
-If you want React rendering, use:
+## Why this shape exists
 
-- `@toon-ui/react`
-- or `@toon-ui/toon-ui`
+The old flat helpers were technically functional but conceptually noisy.
 
----
+The new model is explicit:
 
-## Interaction helpers
-
-### `formatReplyMessage()`
-
-```ts
-import { formatReplyMessage } from '@toon-ui/core';
-
-const content = formatReplyMessage({
-  kind: 'ui_reply',
-  eventId: 'reply_123',
-  source: 'button',
-  component: 'button',
-  value: 'Sí, elimínalo',
-});
-```
-
-### `formatSubmitMessage()`
-
-```ts
-import { formatSubmitMessage } from '@toon-ui/core';
-
-const content = formatSubmitMessage({
-  kind: 'ui_submit',
-  eventId: 'submit_123',
-  source: 'form',
-  intent: 'create_product',
-  formTitle: 'Crear producto',
-  values: { name: 'Coca-Cola', price: 2500 },
-});
-```
-
-### `createChatMessage()`
-
-```ts
-import { createChatMessage } from '@toon-ui/core';
-
-const message = createChatMessage({
-  kind: 'ui_reply',
-  eventId: 'reply_123',
-  source: 'button',
-  component: 'button',
-  value: 'Sí, elimínalo',
-});
-
-console.log(message.content);
-console.log(message.displayContent);
-```
-
-### `createChatUIMessage()`
-
-Useful when your frontend uses `useChat`/`UIMessage`-style state and you need:
-
-- model-facing `content` in `parts`
-- human-facing `displayContent` in `metadata`
-
-```ts
-import { createChatUIMessage } from '@toon-ui/core';
-
-const message = createChatUIMessage({
-  kind: 'ui_submit',
-  eventId: 'submit_123',
-  source: 'form',
-  intent: 'agregar_cliente',
-  formTitle: 'Agregar cliente',
-  values: {
-    name: 'Jefferson Lopez Mendoza',
-    email: 'jeffersonlopezmendoza343@gmail.com',
-  },
-});
-
-console.log(message.parts[0].text); // model content
-console.log(message.metadata.displayContent); // human content
-```
-
----
+- `catalog` = language definition
+- `events` = user intent objects
+- `messages` = reinjection into chat state
 
 ## Boundary
 
-`@toon-ui/core` owns:
+`@toon-ui/core` does NOT render React.
 
-- grammar
-- AST
-- validation
-- prompts
-- interaction protocol
+If you need rendering:
 
-It does NOT own:
+- `@toon-ui/react` for explicit adapters
+- `@toon-ui/toon-ui` for the simplest client path
 
-- React rendering
-- backend tools
-- persistence
-- model orchestration

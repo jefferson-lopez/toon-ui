@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { ToonSyntaxError, createChatMessage, createChatUIMessage, createToonCoreRuntime, createToonProtocol, extractToonBlocks, formatReplyMessage, formatSubmitMessage, parseToonUI, validateToonUI } from '../src';
+import {
+  TOON_CATALOG,
+  ToonSyntaxError,
+  createToonCatalog,
+  createToonCoreRuntime,
+  createToonProtocol,
+  extractToonBlocks,
+  parseToonUI,
+  validateToonUI,
+} from '../src';
 
 describe('toon core', () => {
   it('extracts toon-ui blocks from markdown', () => {
@@ -97,9 +106,19 @@ describe('toon core', () => {
     });
   });
 
-  it('creates structured reply and submit messages with event ids', () => {
-    const reply = formatReplyMessage('Sí, elimínalo', { source: 'confirm' });
-    const submit = formatSubmitMessage({
+  it('builds protocol events through the explicit events api', () => {
+    const protocol = createToonProtocol();
+    const reply = protocol.events.reply('Sí, elimínalo', { source: 'confirm' });
+    const submit = protocol.events.submit('create_product', { name: 'Coca-Cola', price: 2500 });
+
+    expect(reply).toMatchObject({ kind: 'ui_reply', value: 'Sí, elimínalo' });
+    expect(submit).toMatchObject({ kind: 'ui_submit', intent: 'create_product' });
+  });
+
+  it('creates structured reply and submit contents with event ids', () => {
+    const protocol = createToonProtocol();
+    const reply = protocol.messages.toContent(protocol.events.reply('Sí, elimínalo', { source: 'confirm' }));
+    const submit = protocol.messages.toContent({
       kind: 'ui_submit',
       eventId: 'submit_123',
       source: 'form',
@@ -114,22 +133,25 @@ describe('toon core', () => {
     expect(submit).toContain('eventId: submit_123');
   });
 
-  it('creates a protocol-only runtime for server-side prompt usage', () => {
+  it('creates a protocol with catalog, events and message helpers', () => {
     const protocol = createToonProtocol();
 
     expect(protocol.prompt).toContain('You are generating ToonUI');
     expect(protocol.rules.components).toContain('form');
-    expect(protocol.createChatMessage({
+    expect(protocol.catalog.components.form.syntax).toContain('form "Title"');
+    expect(protocol.events.reply('Abrir detalle')).toMatchObject({ kind: 'ui_reply', value: 'Abrir detalle' });
+    expect(protocol.messages.toContent({
       kind: 'ui_reply',
       eventId: 'reply_123',
       source: 'button',
       component: 'button',
       value: 'Abrir detalle',
-    }).content).toContain('ui_reply:');
+    })).toContain('ui_reply:');
   });
 
-  it('creates chat-ready messages for reply and submit interactions', () => {
-    const reply = createChatMessage({
+  it('creates chat-ready model messages for reply and submit interactions', () => {
+    const protocol = createToonProtocol();
+    const reply = protocol.messages.toModelMessage({
       kind: 'ui_reply',
       eventId: 'reply_123',
       source: 'button',
@@ -137,7 +159,7 @@ describe('toon core', () => {
       value: 'Sí, elimínalo',
     });
 
-    const submit = createChatMessage({
+    const submit = protocol.messages.toModelMessage({
       kind: 'ui_submit',
       eventId: 'submit_123',
       source: 'form',
@@ -170,22 +192,9 @@ describe('toon core', () => {
     });
   });
 
-  it('creates stronger prompt guidance for canonical syntax and invalid constructs', () => {
-    const protocol = createToonProtocol();
-
-    expect(protocol.prompt).toContain('Canonical syntax rules:');
-    expect(protocol.prompt).toContain('UI decision policy:');
-    expect(protocol.prompt).toContain('Use form blocks immediately for create, edit, register, capture, or update flows');
-    expect(protocol.prompt).toContain('Do NOT ask the user whether they want a UI');
-    expect(protocol.prompt).toContain('placeholder="..."');
-    expect(protocol.prompt).toContain('badge MUST be: badge "Label" <variant>');
-    expect(protocol.prompt).toContain('NEVER invent components such as header');
-    expect(protocol.prompt).toContain('badge success "Customer" -> INVALID');
-    expect(protocol.prompt).toContain('The prompt instructions stay in English, but visible UI labels');
-  });
-
   it('creates ui-message-shaped chat entries with metadata for frontend rendering', () => {
-    const reply = createChatUIMessage({
+    const protocol = createToonProtocol();
+    const reply = protocol.messages.toUIMessage({
       kind: 'ui_reply',
       eventId: 'reply_123',
       source: 'button',
@@ -204,28 +213,41 @@ describe('toon core', () => {
     });
   });
 
-  it('creates a runtime prompt and preserves the component registry', () => {
+  it('creates stronger prompt guidance from the centralized catalog', () => {
+    const protocol = createToonProtocol();
+
+    expect(protocol.prompt).toContain('Canonical syntax rules:');
+    expect(protocol.prompt).toContain('UI decision policy:');
+    expect(protocol.prompt).toContain('Use form blocks immediately for create, edit, register, capture, or update flows');
+    expect(protocol.prompt).toContain('Do NOT ask the user whether they want a UI');
+    expect(protocol.prompt).toContain('placeholder="..."');
+    expect(protocol.prompt).toContain('badge "Label" <variant>');
+    expect(protocol.prompt).toContain('NEVER invent components such as header');
+    expect(protocol.prompt).toContain('badge success "Customer" -> INVALID');
+    expect(protocol.prompt).toContain('The prompt instructions stay in English, but visible UI labels');
+  });
+
+  it('preserves runtime components while exposing catalog/message namespaces', () => {
     const button = Symbol('button');
     const runtime = createToonCoreRuntime({
       components: { button },
     });
 
     expect(runtime.prompt).toContain('Allowed components');
-    expect(runtime.prompt).not.toContain('Available tools');
     expect(runtime.components.button).toBe(button);
-    expect(runtime.createChatMessage({
+    expect(runtime.catalog.components.button.summary).toContain('interaction');
+    expect(runtime.messages.toModelMessage({
       kind: 'ui_reply',
       eventId: 'reply_123',
       source: 'button',
       component: 'button',
       value: 'Crear producto',
     }).displayContent).toBe('Crear producto');
-    expect(runtime.createChatUIMessage({
-      kind: 'ui_reply',
-      eventId: 'reply_124',
-      source: 'button',
-      component: 'button',
-      value: 'Crear producto',
-    }).metadata.displayContent).toBe('Crear producto');
+  });
+
+  it('exposes a single central catalog object', () => {
+    expect(createToonCatalog()).toBe(TOON_CATALOG);
+    expect(TOON_CATALOG.components.chart.children).toContain('series');
+    expect(TOON_CATALOG.examples.valid.length).toBeGreaterThan(0);
   });
 });

@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { ToonMessage, createToonRuntime } from '@toon-ui/toon-ui';
+import { ToonMessage, createToonClient } from '@toon-ui/toon-ui';
 
 const sample = [
   'Claro, encontré este producto.',
@@ -24,7 +24,7 @@ const showcase = [
   'alert info "Estado del sistema":',
   '  text "La nueva versión amplía el catálogo semántico y el modo UI-first."',
   'card "Resumen":',
-  '  badge "v1.2.0" info',
+  '  badge "v2.0.0" info',
   '  text "Incluye overlays, navegación ligera, feedback, charts y mejores formularios."',
   'empty "No hay resultados recientes":',
   '  text "Usa este patrón para estados vacíos."',
@@ -102,7 +102,7 @@ const groups = [
   { title: 'Analytics', items: ['chart'] },
 ];
 
-const toon = createToonRuntime();
+const toon = createToonClient();
 
 function SectionCard({ children }: { children: React.ReactNode }) {
   return <section style={{ background: '#ffffff', borderRadius: 16, padding: 20, display: 'grid', gap: 16, alignContent: 'start' }}>{children}</section>;
@@ -135,7 +135,7 @@ export default function App() {
         <div style={{ display: 'grid', gap: 12 }}>
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
             <button onClick={() => setContent(sample)} style={{ borderRadius: 10, padding: '10px 14px', background: '#111827', color: '#fff', border: 0 }}>Restaurar ejemplo</button>
-            <button onClick={() => setContent(showcase)} style={{ borderRadius: 10, padding: '10px 14px', background: '#2563eb', color: '#fff', border: 0 }}>Cargar showcase v1.2</button>
+            <button onClick={() => setContent(showcase)} style={{ borderRadius: 10, padding: '10px 14px', background: '#2563eb', color: '#fff', border: 0 }}>Cargar showcase v2.0</button>
             <button onClick={() => navigator.clipboard?.writeText(toon.prompt)} style={{ borderRadius: 10, padding: '10px 14px', background: '#e5e7eb', border: 0 }}>Copiar prompt</button>
           </div>
 
