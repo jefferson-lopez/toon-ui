@@ -49,6 +49,7 @@ export interface FieldNode extends BaseNode {
   name: string;
   fieldType: FieldType;
   label: string;
+  placeholder?: string;
   required: boolean;
 }
 

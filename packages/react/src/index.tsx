@@ -117,11 +117,11 @@ export type ToonResolvedButtonProps = Pick<
 >;
 export type ToonResolvedInputProps = Pick<
   React.InputHTMLAttributes<HTMLInputElement>,
-  'id' | 'name' | 'type' | 'required' | 'disabled' | 'value' | 'checked' | 'onChange'
+  'id' | 'name' | 'type' | 'required' | 'disabled' | 'value' | 'checked' | 'placeholder' | 'onChange'
 >;
 export type ToonResolvedTextareaProps = Pick<
   React.TextareaHTMLAttributes<HTMLTextAreaElement>,
-  'id' | 'name' | 'required' | 'disabled' | 'value' | 'onChange'
+  'id' | 'name' | 'required' | 'disabled' | 'value' | 'placeholder' | 'onChange'
 >;
 
 const defaultLayout: ResolvedToonReactLayout = {
@@ -219,6 +219,7 @@ export function getToonInputProps({
     type: node.fieldType === 'textarea' || node.fieldType === 'select' || node.fieldType === 'checkbox' ? 'text' : node.fieldType,
     required: node.required,
     disabled,
+    placeholder: node.placeholder,
     value: typeof value === 'number' ? String(value) : String(value ?? ''),
     onChange: (event) => {
       if (node.fieldType === 'number') {
@@ -243,6 +244,7 @@ export function getToonTextareaProps({
     name: node.name,
     required: node.required,
     disabled,
+    placeholder: node.placeholder,
     value: String(value ?? ''),
     onChange: (event) => onChange(event.currentTarget.value),
   };
@@ -287,11 +289,13 @@ export function ToonProvider({
   children,
   onReply,
   onSubmit,
+  interactive = true,
 }: {
   runtime: ToonReactRuntime;
   children: React.ReactNode;
   onReply?: (payload: ToonReplyPayload) => void;
   onSubmit?: (payload: ToonSubmitPayload) => void;
+  interactive?: boolean;
 }) {
   const [formState, setFormState] = useState<Record<string, Record<string, ToonFieldValue>>>({});
   const [resolvedBlocks, setResolvedBlocks] = useState<Record<string, true>>({});
@@ -337,13 +341,13 @@ export function ToonProvider({
         },
       }));
     },
-    isBlockResolved: (blockId) => Boolean(resolvedBlocks[blockId]),
+    isBlockResolved: (blockId) => !interactive || Boolean(resolvedBlocks[blockId]),
     resolveBlock: (blockId) => {
       setResolvedBlocks((current) => (current[blockId] ? current : { ...current, [blockId]: true }));
     },
     formatSubmitMessage: runtime.formatSubmitMessage,
     formatReplyMessage: runtime.formatReplyMessage,
-  }), [formState, onReply, onSubmit, resolvedBlocks, runtime]);
+  }), [formState, interactive, onReply, onSubmit, resolvedBlocks, runtime]);
 
   return (
     <ToonRuntimeContext.Provider value={runtime}>
@@ -420,6 +424,7 @@ function renderFallback(node: ToonNode, children: React.ReactNode, form: FormNod
           <input
             name={node.name}
             disabled={blockResolved}
+            placeholder={node.placeholder}
             style={{ width: '100%', minWidth: 0, boxSizing: 'border-box' }}
             value={String(context.getFieldValue(form, node) ?? '')}
             onChange={(event) => blockResolved ? undefined : context.setFieldValue(form, node, event.target.value)}
@@ -568,14 +573,16 @@ export function ToonRenderer({
   runtime,
   onReply,
   onSubmit,
+  interactive = true,
 }: {
   content: string;
   runtime: ToonReactRuntime;
   onReply?: (payload: ToonReplyPayload) => void;
   onSubmit?: (payload: ToonSubmitPayload) => void;
+  interactive?: boolean;
 }) {
   return (
-    <ToonProvider runtime={runtime} onReply={onReply} onSubmit={onSubmit}>
+    <ToonProvider runtime={runtime} onReply={onReply} onSubmit={onSubmit} interactive={interactive}>
       <ToonRendererInner content={content} />
     </ToonProvider>
   );
@@ -587,12 +594,14 @@ export function ToonMessage({
   onReply,
   onSubmit,
   renderMarkdown = (markdown) => <ReactMarkdown>{markdown}</ReactMarkdown>,
+  interactive = true,
 }: {
   content: string;
   runtime: ToonReactRuntime;
   onReply?: (payload: ToonReplyPayload) => void;
   onSubmit?: (payload: ToonSubmitPayload) => void;
   renderMarkdown?: ToonMarkdownRenderer;
+  interactive?: boolean;
 }) {
   const blocks = runtime.extractBlocks(content);
   const markdown = extractToonMarkdown(content);
@@ -604,7 +613,7 @@ export function ToonMessage({
           {renderMarkdown(markdown)}
         </div>
       ) : null}
-      {blocks.length > 0 ? <ToonRenderer content={content} runtime={runtime} onReply={onReply} onSubmit={onSubmit} /> : null}
+      {blocks.length > 0 ? <ToonRenderer content={content} runtime={runtime} onReply={onReply} onSubmit={onSubmit} interactive={interactive} /> : null}
     </div>
   );
 }

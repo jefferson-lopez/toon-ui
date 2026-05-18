@@ -28,13 +28,14 @@ describe('toon core', () => {
   it('parses and validates a simple form', () => {
     const document = parseToonUI([
       'form "Crear producto":',
-      '  field name text "Nombre" required',
+      '  field name text "Nombre" placeholder="Ej: Coca-Cola" required',
       '  button primary "Crear producto" submit',
     ].join('\n'));
 
     const result = validateToonUI(document);
     expect(result.ok).toBe(true);
     expect(document.body[0]).toMatchObject({ type: 'form', line: 1, column: 1 });
+    expect((document.body[0] as { children: Array<{ placeholder?: string }> }).children[0]?.placeholder).toBe('Ej: Coca-Cola');
   });
 
   it('rejects meta because the official catalog is closed', () => {
@@ -78,6 +79,22 @@ describe('toon core', () => {
     const result = validateToonUI(document);
     expect(result.errors.some((issue) => issue.code === 'INVALID_NESTING')).toBe(true);
     expect(result.errors.some((issue) => issue.code === 'INVALID_PROP')).toBe(true);
+  });
+
+  it('parses quoted table cells with commas without breaking the row shape', () => {
+    const document = parseToonUI([
+      'table "Ventas":',
+      '  columns: "Fecha", "Total", "Estado"',
+      '  row: "14 de mayo", "$ 8,155.35", "Completado"',
+    ].join('\n'));
+
+    const result = validateToonUI(document);
+    expect(result.ok).toBe(true);
+    expect(document.body[0]).toMatchObject({
+      type: 'table',
+      columns: ['Fecha', 'Total', 'Estado'],
+      rows: [['14 de mayo', '$ 8,155.35', 'Completado']],
+    });
   });
 
   it('creates structured reply and submit messages with event ids', () => {
@@ -157,9 +174,14 @@ describe('toon core', () => {
     const protocol = createToonProtocol();
 
     expect(protocol.prompt).toContain('Canonical syntax rules:');
+    expect(protocol.prompt).toContain('UI decision policy:');
+    expect(protocol.prompt).toContain('Use form blocks immediately for create, edit, register, capture, or update flows');
+    expect(protocol.prompt).toContain('Do NOT ask the user whether they want a UI');
+    expect(protocol.prompt).toContain('placeholder="..."');
     expect(protocol.prompt).toContain('badge MUST be: badge "Label" <variant>');
     expect(protocol.prompt).toContain('NEVER invent components such as header');
-    expect(protocol.prompt).toContain('badge success "Cliente" -> INVALID');
+    expect(protocol.prompt).toContain('badge success "Customer" -> INVALID');
+    expect(protocol.prompt).toContain('The prompt instructions stay in English, but visible UI labels');
   });
 
   it('creates ui-message-shaped chat entries with metadata for frontend rendering', () => {

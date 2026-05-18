@@ -1,7 +1,4 @@
 import {
-  type CreateToonUIOptions,
-} from '@toon-ui/core';
-import {
   basicPreset,
   createToonReactRuntime,
   type CreateToonReactRuntimeOptions,
