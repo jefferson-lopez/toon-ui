@@ -48,6 +48,11 @@ So instead of wiring `basicPreset()` manually, you can move faster.
 - `ToonMessage`
 - `ToonRenderer`
 - `extractToonMarkdown`
+- `getToonButtonProps`
+- `getToonFieldId`
+- `getToonInputProps`
+- `getToonTextareaProps`
+- `getToonCheckboxProps`
 - `ToonProvider`
 - `useToonUI()`
 - `useToonReply()`
@@ -160,10 +165,23 @@ const toon = createToonRuntime();
 ### Partial override example
 
 ```tsx
-import { createToonRuntime } from '@toon-ui/toon-ui';
+import {
+  createToonRuntime,
+  getToonButtonProps,
+  type ToonButtonComponentProps,
+} from '@toon-ui/toon-ui';
 
-function MyButton(props: any) {
-  return <button className="rounded-md border px-3 py-2" {...props} />;
+function MyButton(props: ToonButtonComponentProps) {
+  const buttonProps = getToonButtonProps(props);
+
+  return (
+    <button
+      className="rounded-md border px-3 py-2"
+      {...buttonProps}
+    >
+      {props.node.label}
+    </button>
+  );
 }
 
 const toon = createToonRuntime({
@@ -174,6 +192,18 @@ const toon = createToonRuntime({
 ```
 
 Everything you do NOT override still falls back to the default preset.
+
+### Integration helpers for custom registries
+
+When you build your own design-system adapter, use the exported helpers so you do NOT forget critical wiring like `disabled`, field ids, and one-shot interaction behavior.
+
+- `getToonButtonProps(props)` → returns `type`, `disabled`, and `onClick`
+- `getToonFieldId(node)` → stable id for labels / controls
+- `getToonInputProps(props)` → input wiring for text/number/email/date/time/select fallback
+- `getToonTextareaProps(props)` → textarea wiring
+- `getToonCheckboxProps(props)` → checkbox wiring
+
+That keeps your adapter small and prevents subtle bugs like buttons that still fire after the block was already resolved.
 
 ---
 

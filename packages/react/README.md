@@ -51,6 +51,11 @@ It is NOT the server protocol layer.
 - `ToonMessage`
 - `ToonRenderer`
 - `extractToonMarkdown`
+- `getToonButtonProps`
+- `getToonFieldId`
+- `getToonInputProps`
+- `getToonTextareaProps`
+- `getToonCheckboxProps`
 - `ToonProvider`
 - `useToonUI()`
 - `useToonReply()`
@@ -501,31 +506,29 @@ import {
   ToonMessage,
   basicPreset,
   createToonReactRuntime,
+  getToonButtonProps,
+  getToonFieldId,
+  getToonInputProps,
+  type ToonButtonComponentProps,
+  type ToonFieldComponentProps,
 } from '@toon-ui/react';
 
-function AppButton({ node, sendReply, submitForm }: any) {
+function AppButton(props: ToonButtonComponentProps) {
   return (
     <button
       className="rounded-md border px-3 py-2"
-      onClick={() =>
-        node.action.kind === 'reply'
-          ? sendReply(node.action.value)
-          : submitForm()
-      }
+      {...getToonButtonProps(props)}
     >
-      {node.label}
+      {props.node.label}
     </button>
   );
 }
 
-function AppField({ node, value, onChange }: any) {
+function AppField(props: ToonFieldComponentProps) {
   return (
     <label className="grid gap-2">
-      <span>{node.label}</span>
-      <input
-        value={value ?? ''}
-        onChange={(event) => onChange(event.currentTarget.value)}
-      />
+      <span>{props.node.label}</span>
+      <input {...getToonInputProps(props)} id={getToonFieldId(props.node)} />
     </label>
   );
 }
@@ -555,6 +558,19 @@ export function AssistantMessage({ content }: { content: string }) {
   );
 }
 ```
+
+### Why these helpers matter
+
+Custom registries are where integrations usually break.
+
+The helpers above make the important parts explicit:
+
+- preserve `disabled` after a block is resolved
+- keep reply vs submit behavior correct
+- generate stable field ids
+- wire text/number/checkbox/textarea controls consistently
+
+Use them unless you have a strong reason to own that wiring manually.
 
 ---
 

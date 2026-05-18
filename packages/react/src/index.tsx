@@ -35,6 +35,8 @@ export interface ToonRenderContextValue {
   submitForm: (form: FormNode) => void;
   getFieldValue: (form: FormNode | undefined, field: FieldNode) => ToonFieldValue | undefined;
   setFieldValue: (form: FormNode | undefined, field: FieldNode, value: ToonFieldValue) => void;
+  isBlockResolved: (blockId: string) => boolean;
+  resolveBlock: (blockId: string) => void;
   formatSubmitMessage: ToonRuntime['formatSubmitMessage'];
   formatReplyMessage: ToonRuntime['formatReplyMessage'];
 }
@@ -43,6 +45,7 @@ type BaseProps<TNode extends ToonNode> = {
   node: TNode;
   children?: React.ReactNode;
   context: ToonRenderContextValue;
+  disabled?: boolean;
 };
 
 export type ToonTextComponentProps = BaseProps<TextNode>;
@@ -56,14 +59,17 @@ export type ToonTableComponentProps = BaseProps<TableNode>;
 export type ToonButtonComponentProps = BaseProps<ButtonNode> & {
   sendReply: (reply?: string) => void;
   submitForm: () => void;
+  disabled: boolean;
 };
 export type ToonFieldComponentProps = BaseProps<FieldNode> & {
   value: ToonFieldValue | undefined;
   onChange: (value: ToonFieldValue) => void;
+  disabled: boolean;
 };
 export type ToonFormComponentProps = BaseProps<FormNode> & {
   submitForm: () => void;
   values: Record<string, ToonFieldValue>;
+  disabled: boolean;
 };
 
 export interface ToonReactComponentPropsByType {
@@ -105,6 +111,18 @@ export type ToonReactRuntime = ToonRuntime<ToonReactComponentRegistry> & {
   layout: ResolvedToonReactLayout;
 };
 export type ToonMarkdownRenderer = (markdown: string) => React.ReactNode;
+export type ToonResolvedButtonProps = Pick<
+  React.ButtonHTMLAttributes<HTMLButtonElement>,
+  'type' | 'disabled' | 'onClick'
+>;
+export type ToonResolvedInputProps = Pick<
+  React.InputHTMLAttributes<HTMLInputElement>,
+  'id' | 'name' | 'type' | 'required' | 'disabled' | 'value' | 'checked' | 'onChange'
+>;
+export type ToonResolvedTextareaProps = Pick<
+  React.TextareaHTMLAttributes<HTMLTextAreaElement>,
+  'id' | 'name' | 'required' | 'disabled' | 'value' | 'onChange'
+>;
 
 const defaultLayout: ResolvedToonReactLayout = {
   messageGap: 16,
@@ -165,6 +183,89 @@ function getFormKey(form: FormNode): string {
   return `${slugify(form.title)}_${form.line}`;
 }
 
+export function getToonFieldId(node: FieldNode): string {
+  return `${node.name}-${node.line}`;
+}
+
+export function getToonButtonProps({
+  node,
+  sendReply,
+  submitForm,
+  disabled,
+}: Pick<ToonButtonComponentProps, 'node' | 'sendReply' | 'submitForm' | 'disabled'>): ToonResolvedButtonProps {
+  return {
+    type: 'button',
+    disabled,
+    onClick: () => {
+      if (disabled) return;
+      if (node.action.kind === 'reply') {
+        sendReply(node.action.value);
+        return;
+      }
+      submitForm();
+    },
+  };
+}
+
+export function getToonInputProps({
+  node,
+  value,
+  onChange,
+  disabled,
+}: Pick<ToonFieldComponentProps, 'node' | 'value' | 'onChange' | 'disabled'>): ToonResolvedInputProps {
+  return {
+    id: getToonFieldId(node),
+    name: node.name,
+    type: node.fieldType === 'textarea' || node.fieldType === 'select' || node.fieldType === 'checkbox' ? 'text' : node.fieldType,
+    required: node.required,
+    disabled,
+    value: typeof value === 'number' ? String(value) : String(value ?? ''),
+    onChange: (event) => {
+      if (node.fieldType === 'number') {
+        const nextValue = event.currentTarget.value;
+        onChange(nextValue === '' ? '' : Number(nextValue));
+        return;
+      }
+
+      onChange(event.currentTarget.value);
+    },
+  };
+}
+
+export function getToonTextareaProps({
+  node,
+  value,
+  onChange,
+  disabled,
+}: Pick<ToonFieldComponentProps, 'node' | 'value' | 'onChange' | 'disabled'>): ToonResolvedTextareaProps {
+  return {
+    id: getToonFieldId(node),
+    name: node.name,
+    required: node.required,
+    disabled,
+    value: String(value ?? ''),
+    onChange: (event) => onChange(event.currentTarget.value),
+  };
+}
+
+export function getToonCheckboxProps({
+  node,
+  value,
+  onChange,
+  disabled,
+}: Pick<ToonFieldComponentProps, 'node' | 'value' | 'onChange' | 'disabled'>): ToonResolvedInputProps {
+  return {
+    id: getToonFieldId(node),
+    name: node.name,
+    type: 'checkbox',
+    required: node.required,
+    disabled,
+    checked: Boolean(value),
+    value: String(Boolean(value)),
+    onChange: (event) => onChange(event.currentTarget.checked),
+  };
+}
+
 function getDefaultFieldValue(field: FieldNode): ToonFieldValue {
   return field.fieldType === 'checkbox' ? false : '';
 }
@@ -193,6 +294,7 @@ export function ToonProvider({
   onSubmit?: (payload: ToonSubmitPayload) => void;
 }) {
   const [formState, setFormState] = useState<Record<string, Record<string, ToonFieldValue>>>({});
+  const [resolvedBlocks, setResolvedBlocks] = useState<Record<string, true>>({});
 
   const contextValue = useMemo<ToonRenderContextValue>(() => ({
     sendReply: (payload) => {
@@ -235,9 +337,13 @@ export function ToonProvider({
         },
       }));
     },
+    isBlockResolved: (blockId) => Boolean(resolvedBlocks[blockId]),
+    resolveBlock: (blockId) => {
+      setResolvedBlocks((current) => (current[blockId] ? current : { ...current, [blockId]: true }));
+    },
     formatSubmitMessage: runtime.formatSubmitMessage,
     formatReplyMessage: runtime.formatReplyMessage,
-  }), [formState, onReply, onSubmit, runtime]);
+  }), [formState, onReply, onSubmit, resolvedBlocks, runtime]);
 
   return (
     <ToonRuntimeContext.Provider value={runtime}>
@@ -286,7 +392,7 @@ function useToonRenderContext() {
   return context;
 }
 
-function renderFallback(node: ToonNode, children: React.ReactNode, form: FormNode | undefined, context: ToonRenderContextValue, key: React.Key): React.ReactNode {
+function renderFallback(node: ToonNode, children: React.ReactNode, form: FormNode | undefined, context: ToonRenderContextValue, key: React.Key, blockResolved = false): React.ReactNode {
   const layout = useToonUI().layout;
   const nestedBlockStyle = createStackStyle(layout.nodeGap);
   const surfaceStyle = createSurfaceStyle(layout.nodeGap);
@@ -301,7 +407,8 @@ function renderFallback(node: ToonNode, children: React.ReactNode, form: FormNod
         <button
           key={key}
           type="button"
-          onClick={() => node.action.kind === 'reply' ? context.sendReply({ kind: 'ui_reply', eventId: createEventId('reply'), source: 'button', component: 'button', value: node.action.value, line: node.line, node }) : form ? context.submitForm(form) : undefined}
+          disabled={blockResolved}
+          onClick={() => blockResolved ? undefined : node.action.kind === 'reply' ? context.sendReply({ kind: 'ui_reply', eventId: createEventId('reply'), source: 'button', component: 'button', value: node.action.value, line: node.line, node }) : form ? context.submitForm(form) : undefined}
         >
           {node.label}
         </button>
@@ -312,9 +419,10 @@ function renderFallback(node: ToonNode, children: React.ReactNode, form: FormNod
           {node.label}
           <input
             name={node.name}
+            disabled={blockResolved}
             style={{ width: '100%', minWidth: 0, boxSizing: 'border-box' }}
             value={String(context.getFieldValue(form, node) ?? '')}
-            onChange={(event) => context.setFieldValue(form, node, event.target.value)}
+            onChange={(event) => blockResolved ? undefined : context.setFieldValue(form, node, event.target.value)}
           />
         </label>
       );
@@ -333,42 +441,52 @@ function renderFallback(node: ToonNode, children: React.ReactNode, form: FormNod
   }
 }
 
-function RegisteredNode({ node, form, nodeKey }: { node: ToonNode; form?: FormNode; nodeKey: React.Key }) {
+function RegisteredNode({ node, form, nodeKey, blockId }: { node: ToonNode; form?: FormNode; nodeKey: React.Key; blockId: string }) {
   const runtime = useToonUI();
   const context = useToonRenderContext();
   const activeForm = node.type === 'form' ? node : form;
-  const children = 'children' in node ? node.children.map((child, index) => <RegisteredNode key={`${String(nodeKey)}-${index}`} node={child} form={activeForm} nodeKey={`${String(nodeKey)}-${index}`} />) : undefined;
+  const blockResolved = context.isBlockResolved(blockId);
+  const children = 'children' in node ? node.children.map((child, index) => <RegisteredNode key={`${String(nodeKey)}-${index}`} node={child} form={activeForm} nodeKey={`${String(nodeKey)}-${index}`} blockId={blockId} />) : undefined;
 
   switch (node.type) {
     case 'text': {
       const Component = runtime.components.text;
-      return Component ? <Component node={node} context={context} /> : renderFallback(node, children, activeForm, context, nodeKey);
+      return Component ? <Component node={node} context={context} disabled={blockResolved} /> : renderFallback(node, children, activeForm, context, nodeKey, blockResolved);
     }
     case 'badge': {
       const Component = runtime.components.badge;
-      return Component ? <Component node={node} context={context} /> : renderFallback(node, children, activeForm, context, nodeKey);
+      return Component ? <Component node={node} context={context} disabled={blockResolved} /> : renderFallback(node, children, activeForm, context, nodeKey, blockResolved);
     }
     case 'button': {
       const Component = runtime.components.button;
       const sendReply = (reply = node.action.kind === 'reply' ? node.action.value : '') => {
+        if (blockResolved) return;
         if (node.action.kind === 'reply') {
+          context.resolveBlock(blockId);
           context.sendReply({ kind: 'ui_reply', eventId: createEventId('reply'), source: 'button', component: 'button', value: reply, line: node.line, node });
         }
       };
       const submitForm = () => {
-        if (activeForm) context.submitForm(activeForm);
+        if (blockResolved) return;
+        if (activeForm) {
+          context.resolveBlock(blockId);
+          context.submitForm(activeForm);
+        }
       };
       return Component
-        ? <Component node={node} context={context} sendReply={sendReply} submitForm={submitForm} />
-        : renderFallback(node, children, activeForm, context, nodeKey);
+        ? <Component node={node} context={context} sendReply={sendReply} submitForm={submitForm} disabled={blockResolved} />
+        : renderFallback(node, children, activeForm, context, nodeKey, blockResolved);
     }
     case 'field': {
       const Component = runtime.components.field;
       const value = context.getFieldValue(activeForm, node);
-      const onChange = (nextValue: ToonFieldValue) => context.setFieldValue(activeForm, node, nextValue);
+      const onChange = (nextValue: ToonFieldValue) => {
+        if (blockResolved) return;
+        context.setFieldValue(activeForm, node, nextValue);
+      };
       return Component
-        ? <Component node={node} context={context} value={value} onChange={onChange} />
-        : renderFallback(node, children, activeForm, context, nodeKey);
+        ? <Component node={node} context={context} value={value} onChange={onChange} disabled={blockResolved} />
+        : renderFallback(node, children, activeForm, context, nodeKey, blockResolved);
     }
     case 'form': {
       const Component = runtime.components.form;
@@ -377,34 +495,38 @@ function RegisteredNode({ node, form, nodeKey }: { node: ToonNode; form?: FormNo
         accumulator[field.name] = context.getFieldValue(node, field) ?? getDefaultFieldValue(field);
         return accumulator;
       }, {});
-      const submitForm = () => context.submitForm(node);
+      const submitForm = () => {
+        if (blockResolved) return;
+        context.resolveBlock(blockId);
+        context.submitForm(node);
+      };
       return Component
-        ? <Component node={node} context={context} values={values} submitForm={submitForm}>{children}</Component>
-        : renderFallback(node, children, node, context, nodeKey);
+        ? <Component node={node} context={context} values={values} submitForm={submitForm} disabled={blockResolved}>{children}</Component>
+        : renderFallback(node, children, node, context, nodeKey, blockResolved);
     }
     case 'card': {
       const Component = runtime.components.card;
-      return Component ? <Component node={node} context={context}>{children}</Component> : renderFallback(node, children, activeForm, context, nodeKey);
+      return Component ? <Component node={node} context={context} disabled={blockResolved}>{children}</Component> : renderFallback(node, children, activeForm, context, nodeKey, blockResolved);
     }
     case 'confirm': {
       const Component = runtime.components.confirm;
-      return Component ? <Component node={node} context={context}>{children}</Component> : renderFallback(node, children, activeForm, context, nodeKey);
+      return Component ? <Component node={node} context={context} disabled={blockResolved}>{children}</Component> : renderFallback(node, children, activeForm, context, nodeKey, blockResolved);
     }
     case 'list': {
       const Component = runtime.components.list;
-      return Component ? <Component node={node} context={context}>{children}</Component> : renderFallback(node, children, activeForm, context, nodeKey);
+      return Component ? <Component node={node} context={context} disabled={blockResolved}>{children}</Component> : renderFallback(node, children, activeForm, context, nodeKey, blockResolved);
     }
     case 'item': {
       const Component = runtime.components.item;
-      return Component ? <Component node={node} context={context}>{children}</Component> : renderFallback(node, children, activeForm, context, nodeKey);
+      return Component ? <Component node={node} context={context} disabled={blockResolved}>{children}</Component> : renderFallback(node, children, activeForm, context, nodeKey, blockResolved);
     }
     case 'alert': {
       const Component = runtime.components.alert;
-      return Component ? <Component node={node} context={context}>{children}</Component> : renderFallback(node, children, activeForm, context, nodeKey);
+      return Component ? <Component node={node} context={context} disabled={blockResolved}>{children}</Component> : renderFallback(node, children, activeForm, context, nodeKey, blockResolved);
     }
     case 'table': {
       const Component = runtime.components.table;
-      return Component ? <Component node={node} context={context} /> : renderFallback(node, children, activeForm, context, nodeKey);
+      return Component ? <Component node={node} context={context} disabled={blockResolved} /> : renderFallback(node, children, activeForm, context, nodeKey, blockResolved);
     }
     default:
       return null;
@@ -429,7 +551,7 @@ function ToonRendererInner({ content }: { content: string }) {
           return (
             <div key={index} data-toon-ui-block style={createStackStyle(runtime.layout.blockGap)}>
               {ast.body.map((node, nodeIndex) => (
-                <RegisteredNode key={`${index}-${nodeIndex}`} node={node} nodeKey={`${index}-${nodeIndex}`} />
+                <RegisteredNode key={`${index}-${nodeIndex}`} node={node} nodeKey={`${index}-${nodeIndex}`} blockId={`block-${index}`} />
               ))}
             </div>
           );
@@ -527,25 +649,21 @@ export function basicPreset(): ToonReactComponentRegistry {
   return {
     text: ({ node }: ToonTextComponentProps) => <p style={{ margin: 0 }}>{node.value}</p>,
     badge: ({ node }: ToonBadgeComponentProps) => <span style={{ ...presetTone(node.variant), padding: '2px 8px', borderRadius: 999, display: 'inline-flex', width: 'fit-content' }}>{node.label}</span>,
-    button: ({ node, sendReply, submitForm }: ToonButtonComponentProps) => (
+    button: ({ node, sendReply, submitForm, disabled }: ToonButtonComponentProps) => (
       <button
-        type="button"
         style={{ ...presetTone(node.variant), padding: '8px 12px', borderRadius: 8 }}
-        onClick={() => node.action.kind === 'reply' ? sendReply(node.action.value) : submitForm()}
+        {...getToonButtonProps({ node, sendReply, submitForm, disabled })}
       >
         {node.label}
       </button>
     ),
-    field: ({ node, value, onChange }: ToonFieldComponentProps) => (
+    field: ({ node, value, onChange, disabled }: ToonFieldComponentProps) => (
       <label style={{ display: 'grid', gap: 6, width: '100%', minWidth: 0 }}>
         <span>{node.label}</span>
         <input
-          name={node.name}
-          type={node.fieldType === 'textarea' || node.fieldType === 'select' || node.fieldType === 'checkbox' ? 'text' : node.fieldType}
-          aria-required={node.required}
           style={{ width: '100%', minWidth: 0, boxSizing: 'border-box' }}
-          value={typeof value === 'boolean' ? String(value) : (value ?? '')}
-          onChange={(event) => onChange(node.fieldType === 'checkbox' ? event.currentTarget.checked : event.currentTarget.value)}
+          {...getToonInputProps({ node, value, onChange, disabled })}
+          aria-required={node.required}
         />
       </label>
     ),
