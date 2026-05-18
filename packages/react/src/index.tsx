@@ -130,14 +130,22 @@ export function createToonReactRuntime(
 }
 
 export function extractToonMarkdown(content: string): string {
-  return content.replace(/```toon-ui[\s\S]*?```/g, '').trim();
+  return content.replace(/```toon-ui[\s\S]*?(?:```|$)/g, '').trim();
 }
 
 const ToonRuntimeContext = createContext<ToonReactRuntime | null>(null);
 const ToonRenderContext = createContext<ToonRenderContextValue | null>(null);
 
 function createStackStyle(gap: React.CSSProperties['gap']): React.CSSProperties {
-  return { display: 'grid', gap };
+  return { display: 'grid', gap, width: '100%', minWidth: 0 };
+}
+
+function createSurfaceStyle(gap: React.CSSProperties['gap'], extra: React.CSSProperties = {}): React.CSSProperties {
+  return {
+    ...createStackStyle(gap),
+    boxSizing: 'border-box',
+    ...extra,
+  };
 }
 
 function createEventId(prefix: string): string {
@@ -281,6 +289,7 @@ function useToonRenderContext() {
 function renderFallback(node: ToonNode, children: React.ReactNode, form: FormNode | undefined, context: ToonRenderContextValue, key: React.Key): React.ReactNode {
   const layout = useToonUI().layout;
   const nestedBlockStyle = createStackStyle(layout.nodeGap);
+  const surfaceStyle = createSurfaceStyle(layout.nodeGap);
 
   switch (node.type) {
     case 'text':
@@ -299,10 +308,11 @@ function renderFallback(node: ToonNode, children: React.ReactNode, form: FormNod
       );
     case 'field':
       return (
-        <label key={key}>
+        <label key={key} style={createSurfaceStyle(6)}>
           {node.label}
           <input
             name={node.name}
+            style={{ width: '100%', minWidth: 0, boxSizing: 'border-box' }}
             value={String(context.getFieldValue(form, node) ?? '')}
             onChange={(event) => context.setFieldValue(form, node, event.target.value)}
           />
@@ -313,9 +323,9 @@ function renderFallback(node: ToonNode, children: React.ReactNode, form: FormNod
     case 'form':
     case 'item':
     case 'alert':
-      return <section key={key} style={nestedBlockStyle}><strong>{node.title}</strong><div style={nestedBlockStyle}>{children}</div></section>;
+      return <section key={key} style={surfaceStyle}><strong>{node.title}</strong><div style={nestedBlockStyle}>{children}</div></section>;
     case 'list':
-      return <section key={key} style={nestedBlockStyle}><strong>{node.title}</strong><div style={nestedBlockStyle}>{children}</div></section>;
+      return <section key={key} style={surfaceStyle}><strong>{node.title}</strong><div style={nestedBlockStyle}>{children}</div></section>;
     case 'table':
       return <pre key={key}>{JSON.stringify({ columns: node.columns, rows: node.rows }, null, 2)}</pre>;
     default:
@@ -527,49 +537,50 @@ export function basicPreset(): ToonReactComponentRegistry {
       </button>
     ),
     field: ({ node, value, onChange }: ToonFieldComponentProps) => (
-      <label style={{ display: 'grid', gap: 6 }}>
+      <label style={{ display: 'grid', gap: 6, width: '100%', minWidth: 0 }}>
         <span>{node.label}</span>
         <input
           name={node.name}
           type={node.fieldType === 'textarea' || node.fieldType === 'select' || node.fieldType === 'checkbox' ? 'text' : node.fieldType}
           aria-required={node.required}
+          style={{ width: '100%', minWidth: 0, boxSizing: 'border-box' }}
           value={typeof value === 'boolean' ? String(value) : (value ?? '')}
           onChange={(event) => onChange(node.fieldType === 'checkbox' ? event.currentTarget.checked : event.currentTarget.value)}
         />
       </label>
     ),
     card: ({ node, children }: ToonCardComponentProps) => (
-      <section style={{ border: '1px solid #e5e7eb', borderRadius: 12, padding: 16, display: 'grid', gap: 12 }}>
+      <section style={{ border: '1px solid #e5e7eb', borderRadius: 12, padding: 16, display: 'grid', gap: 12, width: '100%', minWidth: 0, boxSizing: 'border-box' }}>
         <strong>{node.title}</strong>
         {children}
       </section>
     ),
     confirm: ({ node, children }: ToonConfirmComponentProps) => (
-      <section style={{ border: '1px solid #fca5a5', borderRadius: 12, padding: 16, display: 'grid', gap: 12 }}>
+      <section style={{ border: '1px solid #fca5a5', borderRadius: 12, padding: 16, display: 'grid', gap: 12, width: '100%', minWidth: 0, boxSizing: 'border-box' }}>
         <strong>{node.title}</strong>
         {children}
       </section>
     ),
     form: ({ node, children }: ToonFormComponentProps) => (
-      <section style={{ border: '1px solid #e5e7eb', borderRadius: 12, padding: 16, display: 'grid', gap: 12 }}>
+      <section style={{ border: '1px solid #e5e7eb', borderRadius: 12, padding: 16, display: 'grid', gap: 12, width: '100%', minWidth: 0, boxSizing: 'border-box' }}>
         <strong>{node.title}</strong>
         {children}
       </section>
     ),
     item: ({ node, children }: ToonItemComponentProps) => (
-      <section style={{ border: '1px solid #e5e7eb', borderRadius: 12, padding: 16, display: 'grid', gap: 12 }}>
+      <section style={{ border: '1px solid #e5e7eb', borderRadius: 12, padding: 16, display: 'grid', gap: 12, width: '100%', minWidth: 0, boxSizing: 'border-box' }}>
         <strong>{node.title}</strong>
         {children}
       </section>
     ),
     list: ({ node, children }: ToonListComponentProps) => (
-      <section style={{ display: 'grid', gap: 12 }}>
+      <section style={{ display: 'grid', gap: 12, width: '100%', minWidth: 0, boxSizing: 'border-box' }}>
         <strong>{node.title}</strong>
         {children}
       </section>
     ),
     alert: ({ node, children }: ToonAlertComponentProps) => (
-      <section style={{ ...presetTone(node.variant), borderRadius: 12, padding: 16, display: 'grid', gap: 12 }}>
+      <section style={{ ...presetTone(node.variant), borderRadius: 12, padding: 16, display: 'grid', gap: 12, width: '100%', minWidth: 0, boxSizing: 'border-box' }}>
         <strong>{node.title}</strong>
         {children}
       </section>

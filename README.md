@@ -434,7 +434,7 @@ pnpm --filter @examples/next-ai-sdk dev
 
 ---
 
-## Version 0.5.0
+## Version 0.5.1
 
 This release line clarifies the naming and interaction boundary:
 
