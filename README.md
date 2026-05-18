@@ -36,7 +36,7 @@ and your app can render that safely and feed the interaction back into the chat 
 
 1. Use `@toon-ui/core` on the server with `createToonProtocol()`.
 2. Use `@toon-ui/toon-ui` on the client with `createToonRuntime()`.
-3. Render assistant messages with `ToonMessage`.
+3. Render assistant messages with `ToonMessage`, or use `extractToonMarkdown()` + `ToonRenderer` for host-first markdown rendering.
 4. Feed `toon.prompt` into your system prompt.
 5. Convert `onReply` / `onSubmit` payloads with `toon.createChatUIMessage(payload)` if you use `useChat`, or `toon.createChatMessage(payload)` for a generic host loop.
 
@@ -65,7 +65,8 @@ Server
 
 Client
   createToonRuntime()
-  -> <ToonMessage />
+  -> host markdown renderer or <ToonMessage />
+  -> <ToonRenderer />
   -> onReply/onSubmit
   -> createChatUIMessage() or createChatMessage()
   -> back into your chat state
@@ -433,7 +434,7 @@ pnpm --filter @examples/next-ai-sdk dev
 
 ---
 
-## Version 0.4.0
+## Version 0.5.0
 
 This release line clarifies the naming and interaction boundary:
 

@@ -47,6 +47,7 @@ So instead of wiring `basicPreset()` manually, you can move faster.
 - `createToonRuntime()`
 - `ToonMessage`
 - `ToonRenderer`
+- `extractToonMarkdown`
 - `ToonProvider`
 - `useToonUI()`
 - `useToonReply()`
@@ -187,6 +188,7 @@ It:
 - keeps normal text
 - extracts ToonUI blocks
 - renders both together
+- defaults to internal markdown rendering, but lets the host override it
 
 ### Use it when
 
@@ -198,6 +200,7 @@ Your assistant message contains markdown plus optional ToonUI blocks.
 - `runtime: ToonReactRuntime`
 - `onReply?: (payload) => void`
 - `onSubmit?: (payload) => void`
+- `renderMarkdown?: (markdown: string) => React.ReactNode`
 
 ### Example
 
@@ -205,6 +208,7 @@ Your assistant message contains markdown plus optional ToonUI blocks.
 <ToonMessage
   content={message.content}
   runtime={toon}
+  renderMarkdown={(markdown) => <MessageResponse>{markdown}</MessageResponse>}
   onReply={(payload) => console.log(payload)}
   onSubmit={(payload) => console.log(payload)}
 />
@@ -236,6 +240,30 @@ Low-level renderer for only the structured ToonUI blocks.
 
 - `ToonMessage` = full assistant message
 - `ToonRenderer` = only ToonUI rendering
+
+---
+
+## `extractToonMarkdown`
+
+Use this helper when the host app should own markdown rendering.
+
+```tsx
+const markdown = extractToonMarkdown(message.content);
+
+return (
+  <>
+    <MessageResponse>{markdown}</MessageResponse>
+    <ToonRenderer
+      content={message.content}
+      runtime={toon}
+      onReply={handleReply}
+      onSubmit={handleSubmit}
+    />
+  </>
+);
+```
+
+This is the recommended path for host-first integrations such as Vercel AI SDK.
 
 ---
 

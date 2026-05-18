@@ -85,7 +85,8 @@ Use `createToonRuntime()` on the client.
 'use client';
 
 import { useChat } from '@ai-sdk/react';
-import { createToonRuntime, ToonMessage } from '@toon-ui/toon-ui';
+import { MessageResponse } from '@ai-sdk/ui';
+import { createToonRuntime, extractToonMarkdown, ToonRenderer } from '@toon-ui/toon-ui';
 
 const toon = createToonRuntime();
 
@@ -103,22 +104,25 @@ export function AssistantChat() {
         return (
           <div key={message.id}>
             {message.role === 'assistant' ? (
-              <ToonMessage
-                content={content}
-                runtime={toon}
-                onReply={(payload) => {
-                  setMessages((current) => [
-                    ...current,
-                    toon.createChatUIMessage(payload),
-                  ]);
-                }}
-                onSubmit={(payload) => {
-                  setMessages((current) => [
-                    ...current,
-                    toon.createChatUIMessage(payload),
-                  ]);
-                }}
-              />
+              <>
+                <MessageResponse>{extractToonMarkdown(content)}</MessageResponse>
+                <ToonRenderer
+                  content={content}
+                  runtime={toon}
+                  onReply={(payload) => {
+                    setMessages((current) => [
+                      ...current,
+                      toon.createChatUIMessage(payload),
+                    ]);
+                  }}
+                  onSubmit={(payload) => {
+                    setMessages((current) => [
+                      ...current,
+                      toon.createChatUIMessage(payload),
+                    ]);
+                  }}
+                />
+              </>
             ) : (
               <pre>{message.metadata?.displayContent ?? content}</pre>
             )}
@@ -136,7 +140,27 @@ export function AssistantChat() {
 
 ---
 
-## 3. Why `createChatUIMessage()` matters
+## 3. Why host-first markdown rendering is better here
+
+With Vercel AI SDK, the host chat layer already knows how to render streamed message parts.
+
+So the clean split is:
+
+- host owns markdown rendering
+- ToonUI owns only the `toon-ui` blocks
+
+That is why this guide uses:
+
+```tsx
+<MessageResponse>{extractToonMarkdown(content)}</MessageResponse>
+<ToonRenderer content={content} runtime={toon} />
+```
+
+You can still use `ToonMessage` for fast demos or simple apps, but host-first rendering is the better default for a production chat host.
+
+---
+
+## 4. Why `createChatUIMessage()` matters
 
 This helper exists for one reason:
 
@@ -169,7 +193,7 @@ instead of a readable summary.
 
 ---
 
-## 4. `createChatMessage()` vs `createChatUIMessage()`
+## 5. `createChatMessage()` vs `createChatUIMessage()`
 
 ## Use `createChatMessage()` when:
 
@@ -203,7 +227,7 @@ setMessages((current) => [
 
 ---
 
-## 5. Example: customer creation flow
+## 6. Example: customer creation flow
 
 ### User asks
 
@@ -265,7 +289,7 @@ setMessages((current) => [
 
 ---
 
-## 6. Common mistakes
+## 7. Common mistakes
 
 ## Mistake 1: rendering raw protocol text for humans
 

@@ -4,7 +4,6 @@ import type {
   AlertNode,
   BadgeNode,
   ButtonNode,
-  CreateToonUIOptions,
   CardNode,
   ConfirmNode,
   FieldNode,
@@ -85,16 +84,61 @@ export type ToonReactComponentRegistry = Partial<{
   [K in keyof ToonReactComponentPropsByType]: React.ComponentType<ToonReactComponentPropsByType[K]>;
 }>;
 
-export type ToonReactRuntime = ToonRuntime<ToonReactComponentRegistry>;
+export interface ToonReactLayoutOptions {
+  messageGap?: React.CSSProperties['gap'];
+  blockGap?: React.CSSProperties['gap'];
+  nodeGap?: React.CSSProperties['gap'];
+}
+
+export interface CreateToonReactRuntimeOptions {
+  components?: ToonReactComponentRegistry;
+  layout?: ToonReactLayoutOptions;
+}
+
+interface ResolvedToonReactLayout {
+  messageGap: NonNullable<React.CSSProperties['gap']>;
+  blockGap: NonNullable<React.CSSProperties['gap']>;
+  nodeGap: NonNullable<React.CSSProperties['gap']>;
+}
+
+export type ToonReactRuntime = ToonRuntime<ToonReactComponentRegistry> & {
+  layout: ResolvedToonReactLayout;
+};
+export type ToonMarkdownRenderer = (markdown: string) => React.ReactNode;
+
+const defaultLayout: ResolvedToonReactLayout = {
+  messageGap: 16,
+  blockGap: 16,
+  nodeGap: 12,
+};
 
 export function createToonReactRuntime(
-  options: CreateToonUIOptions<ToonReactComponentRegistry> = {},
+  options: CreateToonReactRuntimeOptions = {},
 ): ToonReactRuntime {
-  return createToonCoreRuntime<ToonReactComponentRegistry>(options) as ToonReactRuntime;
+  const layout: ResolvedToonReactLayout = {
+    messageGap: options.layout?.messageGap ?? defaultLayout.messageGap,
+    blockGap: options.layout?.blockGap ?? defaultLayout.blockGap,
+    nodeGap: options.layout?.nodeGap ?? defaultLayout.nodeGap,
+  };
+
+  return {
+    ...createToonCoreRuntime<ToonReactComponentRegistry>({
+      components: options.components,
+    }),
+    layout,
+  } as ToonReactRuntime;
+}
+
+export function extractToonMarkdown(content: string): string {
+  return content.replace(/```toon-ui[\s\S]*?```/g, '').trim();
 }
 
 const ToonRuntimeContext = createContext<ToonReactRuntime | null>(null);
 const ToonRenderContext = createContext<ToonRenderContextValue | null>(null);
+
+function createStackStyle(gap: React.CSSProperties['gap']): React.CSSProperties {
+  return { display: 'grid', gap };
+}
 
 function createEventId(prefix: string): string {
   return `${prefix}_${Math.random().toString(36).slice(2, 10)}`;
@@ -235,11 +279,14 @@ function useToonRenderContext() {
 }
 
 function renderFallback(node: ToonNode, children: React.ReactNode, form: FormNode | undefined, context: ToonRenderContextValue, key: React.Key): React.ReactNode {
+  const layout = useToonUI().layout;
+  const nestedBlockStyle = createStackStyle(layout.nodeGap);
+
   switch (node.type) {
     case 'text':
-      return <p key={key}>{node.value}</p>;
+      return <p key={key} style={{ margin: 0 }}>{node.value}</p>;
     case 'badge':
-      return <span key={key}>{node.label}</span>;
+      return <span key={key} style={{ display: 'inline-flex', width: 'fit-content' }}>{node.label}</span>;
     case 'button':
       return (
         <button
@@ -266,9 +313,9 @@ function renderFallback(node: ToonNode, children: React.ReactNode, form: FormNod
     case 'form':
     case 'item':
     case 'alert':
-      return <section key={key}><strong>{node.title}</strong><div>{children}</div></section>;
+      return <section key={key} style={nestedBlockStyle}><strong>{node.title}</strong><div style={nestedBlockStyle}>{children}</div></section>;
     case 'list':
-      return <section key={key}><strong>{node.title}</strong><div>{children}</div></section>;
+      return <section key={key} style={nestedBlockStyle}><strong>{node.title}</strong><div style={nestedBlockStyle}>{children}</div></section>;
     case 'table':
       return <pre key={key}>{JSON.stringify({ columns: node.columns, rows: node.rows }, null, 2)}</pre>;
     default:
@@ -360,17 +407,17 @@ function ToonRendererInner({ content }: { content: string }) {
   if (blocks.length === 0) return null;
 
   return (
-    <div data-toon-ui-renderer>
+    <div data-toon-ui-renderer style={createStackStyle(runtime.layout.blockGap)}>
       {blocks.map((block, index) => {
         try {
           const ast = runtime.parse(block.raw);
           const result = runtime.validate(ast);
-          if (!result.ok) {
+          if (block.complete && !result.ok) {
             return <ToonError key={index} message="La interfaz generada no es válida." details={result.errors.map((error) => error.message)} />;
           }
 
           return (
-            <div key={index} data-toon-ui-block>
+            <div key={index} data-toon-ui-block style={createStackStyle(runtime.layout.blockGap)}>
               {ast.body.map((node, nodeIndex) => (
                 <RegisteredNode key={`${index}-${nodeIndex}`} node={node} nodeKey={`${index}-${nodeIndex}`} />
               ))}
@@ -407,20 +454,22 @@ export function ToonMessage({
   runtime,
   onReply,
   onSubmit,
+  renderMarkdown = (markdown) => <ReactMarkdown>{markdown}</ReactMarkdown>,
 }: {
   content: string;
   runtime: ToonReactRuntime;
   onReply?: (payload: ToonReplyPayload) => void;
   onSubmit?: (payload: ToonSubmitPayload) => void;
+  renderMarkdown?: ToonMarkdownRenderer;
 }) {
   const blocks = runtime.extractBlocks(content);
-  const markdown = content.replace(/```toon-ui[\s\S]*?```/g, '').trim();
+  const markdown = extractToonMarkdown(content);
 
   return (
-    <div data-toon-ui-message>
+    <div data-toon-ui-message style={createStackStyle(runtime.layout.messageGap)}>
       {markdown ? (
         <div data-toon-markdown>
-          <ReactMarkdown>{markdown}</ReactMarkdown>
+          {renderMarkdown(markdown)}
         </div>
       ) : null}
       {blocks.length > 0 ? <ToonRenderer content={content} runtime={runtime} onReply={onReply} onSubmit={onSubmit} /> : null}
@@ -466,8 +515,8 @@ function presetTone(variant?: string): React.CSSProperties {
 
 export function basicPreset(): ToonReactComponentRegistry {
   return {
-    text: ({ node }: ToonTextComponentProps) => <p>{node.value}</p>,
-    badge: ({ node }: ToonBadgeComponentProps) => <span style={{ ...presetTone(node.variant), padding: '2px 8px', borderRadius: 999 }}>{node.label}</span>,
+    text: ({ node }: ToonTextComponentProps) => <p style={{ margin: 0 }}>{node.value}</p>,
+    badge: ({ node }: ToonBadgeComponentProps) => <span style={{ ...presetTone(node.variant), padding: '2px 8px', borderRadius: 999, display: 'inline-flex', width: 'fit-content' }}>{node.label}</span>,
     button: ({ node, sendReply, submitForm }: ToonButtonComponentProps) => (
       <button
         type="button"

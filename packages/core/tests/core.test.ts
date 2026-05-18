@@ -6,6 +6,23 @@ describe('toon core', () => {
     const blocks = extractToonBlocks('Hello\n```toon-ui\ntext "Hi"\n```');
     expect(blocks).toHaveLength(1);
     expect(blocks[0]?.raw).toContain('text "Hi"');
+    expect(blocks[0]?.complete).toBe(true);
+  });
+
+  it('extracts a renderable partial block while the toon-ui fence is still streaming', () => {
+    const blocks = extractToonBlocks([
+      'Hola',
+      '```toon-ui',
+      'card "Cliente":',
+      '  text "Activo"',
+      'card "Siguiente',
+    ].join('\n'));
+
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0]).toMatchObject({
+      complete: false,
+      raw: ['card "Cliente":', '  text "Activo"'].join('\n'),
+    });
   });
 
   it('parses and validates a simple form', () => {

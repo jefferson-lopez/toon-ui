@@ -122,6 +122,7 @@ export interface ToonBlock {
   language: "toon-ui";
   start: number;
   end: number;
+  complete: boolean;
 }
 
 export interface ValidationIssue {

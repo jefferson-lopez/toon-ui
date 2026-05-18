@@ -50,6 +50,7 @@ It is NOT the server protocol layer.
 - `createToonReactRuntime()`
 - `ToonMessage`
 - `ToonRenderer`
+- `extractToonMarkdown`
 - `ToonProvider`
 - `useToonUI()`
 - `useToonReply()`
@@ -194,6 +195,7 @@ It:
 - keeps normal markdown text
 - extracts `toon-ui` blocks
 - renders text + UI in one component
+- defaults to `ReactMarkdown`, but lets the host replace markdown rendering
 
 ### Use it when
 
@@ -208,6 +210,7 @@ You have an assistant message string that may contain both:
 - `runtime: ToonReactRuntime`
 - `onReply?: (payload: ToonReplyPayload) => void`
 - `onSubmit?: (payload: ToonSubmitPayload) => void`
+- `renderMarkdown?: (markdown: string) => React.ReactNode`
 
 ### Example
 
@@ -215,6 +218,7 @@ You have an assistant message string that may contain both:
 <ToonMessage
   content={message.content}
   runtime={runtime}
+  renderMarkdown={(markdown) => <MyHostMarkdown>{markdown}</MyHostMarkdown>}
   onReply={(payload) => console.log(payload)}
   onSubmit={(payload) => console.log(payload)}
 />
@@ -223,6 +227,10 @@ You have an assistant message string that may contain both:
 ### When NOT to use it
 
 If you already separated the ToonUI block yourself and only want to render the structured UI, use `ToonRenderer`.
+
+### Compatibility note
+
+If you do not pass `renderMarkdown`, `ToonMessage` keeps the existing behavior and renders markdown with `ReactMarkdown`.
 
 ---
 
@@ -259,6 +267,34 @@ It does NOT render surrounding markdown.
 
 - `ToonMessage` = full message
 - `ToonRenderer` = only ToonUI UI rendering
+
+---
+
+## `extractToonMarkdown`
+
+Helper for host-first integrations.
+
+It strips every ```toon-ui block and returns only the surrounding markdown text.
+
+### Example
+
+```tsx
+const markdown = extractToonMarkdown(message.content);
+
+return (
+  <>
+    <MessageResponse>{markdown}</MessageResponse>
+    <ToonRenderer
+      content={message.content}
+      runtime={runtime}
+      onReply={handleReply}
+      onSubmit={handleSubmit}
+    />
+  </>
+);
+```
+
+This is the recommended path when the chat host should own markdown rendering.
 
 ---
 
