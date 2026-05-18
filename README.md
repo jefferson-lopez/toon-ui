@@ -434,12 +434,12 @@ pnpm --filter @examples/next-ai-sdk dev
 
 ---
 
-## Version 1.1.0
+## Version 1.2.0
 
-This release line clarifies the naming and interaction boundary:
+This release line expands ToonUI from a small semantic subset into a much richer UI-first protocol:
 
-- `createToonProtocol()` for server usage
-- `createToonRuntime()` for client usage
-- `createToonReactRuntime()` for advanced React setups
-- `createToonCoreRuntime()` for low-level core runtime usage
-- `createChatUIMessage()` for `useChat`-style integrations
+- expanded semantic catalog with components such as `heading`, `separator`, `empty`, `tabs`, `accordion`, `dialog`, `sheet`, `popover`, `tooltip`, `progress`, `loading`, `toast`, `breadcrumb`, `pagination`, `menu`, `command`, and `chart`
+- richer `field` support with new types like `radio`, `switch`, `combobox`, `otp`, `slider`, and `multiselect`
+- `confirm` now supports semantic variants such as `neutral`, `warning`, and `danger` instead of being implicitly destructive
+- improved prompt guidance so the AI prefers structured ToonUI when it can reduce back-and-forth, especially for forms and data collection
+- chart semantics in the DSL so the AI can express comparisons and trends directly in ToonUI

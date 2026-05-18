@@ -6,7 +6,9 @@ export function createComponentPrompt(rules: ToonRules): string {
     `Button variants: ${rules.buttonVariants.join(', ')}`,
     `Badge variants: ${rules.badgeVariants.join(', ')}`,
     `Alert variants: ${rules.alertVariants.join(', ')}`,
+    `Confirm variants: ${rules.confirmVariants.join(', ')}`,
     `Field types: ${rules.fieldTypes.join(', ')}`,
+    `Chart types: ${rules.chartTypes.join(', ')}`,
   ].join('\n');
 }
 
@@ -18,12 +20,26 @@ export function createSyntaxPrompt(): string {
     '- form MUST be: form "Title": followed by one or more field nodes and one submit button',
     '- field MUST be: field <name> <fieldType> "Label" [placeholder="..."] [required]',
     '- button MUST be: button <variant> "Label" reply="Value" OR button <variant> "Label" submit',
-    '- confirm MUST be: confirm "Title": followed by indented child nodes',
+    '- confirm MUST be: confirm <variant> "Title": followed by indented child nodes',
     '- list MUST be: list "Title": followed only by item nodes',
     '- item MUST be: item "Title": followed by indented child nodes',
     '- badge MUST be: badge "Label" <variant>',
     '- alert MUST be: alert <variant> "Title": followed by indented child nodes',
     '- table MUST be: table "Title": followed by columns: ... and one or more row: ... lines',
+    '- heading MUST be: heading <1-6> "Visible text"',
+    '- separator MUST be: separator OR separator horizontal|vertical',
+    '- empty MUST be: empty "Title": followed by indented child nodes',
+    '- tabs MUST be: tabs "Title": followed by one or more tab "Label": blocks',
+    '- accordion MUST be: accordion "Title": followed by one or more section "Title": blocks',
+    '- dialog, sheet, and popover MUST be: <component> "Title": followed by indented child nodes',
+    '- tooltip MUST be: tooltip "Visible text"',
+    '- progress MUST be: progress "Label" value=<number> max=<number>',
+    '- loading MUST be: loading "Visible text"',
+    '- toast MUST be: toast <variant> "Visible text"',
+    '- breadcrumb MUST be: breadcrumb: followed by one or more crumb "Label" [reply="..."] lines',
+    '- pagination MUST be: pagination page=<number> totalPages=<number>',
+    '- menu and command MUST be: <component> "Title": followed by one or more action "Label" reply="..." or submit lines',
+    '- chart MUST be: chart <type> "Title": followed by one or more series "Label": blocks with point "Label" <number> rows',
     '- In tables, quote every column name and every row cell, especially when values may contain commas like currency or large numbers',
     '- card, form, confirm, list, item, alert, and table ALWAYS require a quoted title',
     '- badge NEVER has children and NEVER has a title prop',
@@ -33,10 +49,11 @@ export function createSyntaxPrompt(): string {
 export function createFallbackPrompt(): string {
   return [
     'Fallback rules:',
-    '- If you are unsure, use only: card, text, badge, button, form, field, confirm, list, item, alert, table.',
-    '- If you need a section heading inside a card, use text "..." instead of inventing header, subtitle, section, or footer.',
+    '- If you are unsure, use only: card, text, heading, badge, button, form, field, confirm, list, item, alert, table, empty.',
+    '- Use heading for hierarchy instead of inventing header, subtitle, or title props on random nodes.',
     '- If you need secondary information, use more text nodes instead of inventing props or components.',
-    '- NEVER invent components such as header, section, footer, subtitle, description, input, modal, stack, grid, or divider.',
+    '- Use section only inside accordion, tab only inside tabs, action only inside menu/command, crumb only inside breadcrumb, series only inside chart, and point only inside series.',
+    '- NEVER invent components such as header, footer, subtitle, description, input, modal, stack, grid, or divider.',
   ].join('\n');
 }
 
@@ -52,17 +69,55 @@ export function createSafetyPrompt(): string {
   ].join('\n');
 }
 
+export function createCompositionPrompt(): string {
+  return [
+    'Composition best practices:',
+    '- Lead with the most useful UI, not with an explanation about the UI.',
+    '- Use ONE focused ToonUI block per intent unless the user truly needs multiple separate blocks.',
+    '- Keep actions close to the data they affect.',
+    '- Prefer simple trees over deeply nested trees.',
+    '- Use heading and separator to improve scanability when a card or dialog has multiple sections.',
+    '- Use empty for zero-result states instead of plain prose.',
+    '- Use loading, progress, and toast for system state and feedback when relevant.',
+    '- Use breadcrumb and pagination only when the user is navigating a larger result space.',
+    '- Use chart only when the user needs trend or comparison understanding; otherwise prefer table for precise values.',
+  ].join('\n');
+}
+
+export function createFormBestPracticesPrompt(): string {
+  return [
+    'Form and data-capture best practices:',
+    '- If the assistant needs 2 or more structured inputs, prefer a form instead of asking one question at a time.',
+    '- If the user must fill several loose values, emit one complete form so the user can answer everything at once.',
+    '- Prefer field over ad-hoc text instructions whenever the data is structured.',
+    '- Use required only for truly mandatory fields.',
+    '- Add placeholder when it helps the user understand the expected format.',
+    '- Add helper text for constraints, formatting, or business rules that might be missed.',
+    '- Use select, radio, checkbox, switch, slider, or multiselect when the valid values are constrained.',
+    '- Use combobox when the user must search within a known set of options.',
+    '- Use textarea only for long-form text.',
+    '- Use otp only for verification codes, not generic numeric input.',
+    '- Group related fields in one form instead of scattering separate forms across the response.',
+    '- A form should usually end with exactly one primary submit button and optional secondary reply buttons only when needed.',
+  ].join('\n');
+}
+
 export function createDecisionPrompt(): string {
   return [
     'UI decision policy:',
-    '- Prefer ToonUI over plain markdown when the user needs to choose, confirm, fill structured data, or scan structured business results.',
+    '- Prefer ToonUI over plain markdown whenever the user needs to choose, confirm, fill structured data, scan structured business results, compare values, or navigate options.',
+    '- Default toward UI when it can reduce back-and-forth.',
     '- Use form blocks immediately for create, edit, register, capture, or update flows that need multiple structured fields.',
-    '- Use confirm blocks immediately for destructive, risky, or irreversible actions.',
-    '- Use table, list, or card blocks for structured business data such as products, sales, inventory, customers, search results, or status summaries.',
-    '- Do NOT ask the user whether they want a UI if a form, confirm, table, list, or card is clearly useful. Emit the ToonUI directly.',
+    '- If collecting several loose pieces of information, do NOT ask for them in separate prose questions; emit a form immediately.',
+    '- Use confirm danger blocks for destructive actions, confirm warning blocks for risky actions, and confirm neutral blocks for basic confirmations.',
+    '- Use table, list, card, chart, tabs, accordion, dialog, sheet, menu, or command when they are a better semantic fit than prose.',
+    '- Do NOT ask the user whether they want a UI if a form, confirm, table, list, card, chart, or command block is clearly useful. Emit the ToonUI directly.',
     '- Do NOT ask for form fields one by one in plain prose when a form can capture them better.',
     '- If tool results return multiple records, prefer table or list instead of markdown bullets or ad-hoc prose.',
     '- If a single entity is found and the user may want a next action, prefer card plus buttons.',
+    '- If the user must choose among actions, prefer menu or command over prose bullet lists.',
+    '- If the user needs hierarchical or dense detail, prefer tabs or accordion over a wall of text.',
+    '- If the user asks for analytics, trends, or comparison, prefer chart plus optional supporting table.',
   ].join('\n');
 }
 
@@ -84,10 +139,17 @@ export function createExamplesPrompt(): string {
     '```',
     '',
     '```toon-ui',
-    'confirm "Delete customer?":',
+    'confirm danger "Delete customer?":',
     '  text "This action cannot be undone."',
     '  button secondary "Cancel" reply="Cancel"',
     '  button danger "Yes, delete" reply="Yes, delete customer"',
+    '```',
+    '',
+    '```toon-ui',
+    'confirm neutral "Continue with selected customer?":',
+    '  text "We will use this customer for the current sale."',
+    '  button secondary "Cancel" reply="Cancel"',
+    '  button primary "Continue" reply="Continue with selected customer"',
     '```',
     '',
     '```toon-ui',
@@ -95,6 +157,13 @@ export function createExamplesPrompt(): string {
     '  columns: "Date", "Sale number", "Total", "Status"',
     '  row: "May 14", "177877222574876", "$ 387.45", "Completed"',
     '  row: "May 09", "177836532655064", "$ 8,155.35", "Completed"',
+    '```',
+    '',
+    '```toon-ui',
+    'chart bar "Weekly sales" x="Day" y="Revenue":',
+    '  series "Store A":',
+    '    point "Mon" 1200',
+    '    point "Tue" 980',
     '```',
     '',
     '```toon-ui',
@@ -111,6 +180,7 @@ export function createExamplesPrompt(): string {
     '- header "Customer"  -> INVALID because header is not an allowed component',
     '- card:             -> INVALID because card requires a quoted title',
     '- badge success "Customer" -> INVALID because badge syntax is badge "Label" variant',
+    '- confirm "Delete customer?": -> VALID for backward compatibility, but prefer confirm danger|warning|neutral "Title":',
     '- form "Customer": with no submit button -> INVALID',
     '- row: May 09, $ 8,155.35, Completed -> RISKY because commas inside values can break the table unless cells are quoted',
     '- "Do you want me to build a UI for this?" -> BAD when a form, confirm, table, list, or card is already the obvious best response',
@@ -120,6 +190,7 @@ export function createExamplesPrompt(): string {
 export function createPrompt(rules: ToonRules): string {
   return [
     'You are generating ToonUI for an AI-native app.',
+    'Your job is to reduce friction for the user by turning structured intent into structured UI whenever it helps.',
     createComponentPrompt(rules),
     '',
     createSyntaxPrompt(),
@@ -127,9 +198,14 @@ export function createPrompt(rules: ToonRules): string {
     'Interaction rules:',
     '- Every button must include variant, label, and reply="..." or submit.',
     '- Every form must include a title, fields, and a submit button.',
-    '- Use confirm blocks for destructive actions.',
+    '- Prefer confirm danger for destructive actions, confirm warning for risky actions, and confirm neutral for normal confirmations.',
     '- Reply protocol: emit user intent through compact ui_reply messages only.',
     '- Submit protocol: emit compact ui_submit payloads with intent and field values only.',
+    '- Visible UI copy must match the user language and the business context.',
+    '',
+    createCompositionPrompt(),
+    '',
+    createFormBestPracticesPrompt(),
     '',
     createFallbackPrompt(),
     '',

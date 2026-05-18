@@ -2,7 +2,7 @@ import { createPrompt } from './prompts';
 import { parseToonUI } from './parser';
 import { validateToonUI } from './validator';
 import { extractToonBlocks } from './formatter';
-import { ALERT_VARIANTS, BADGE_VARIANTS, BUTTON_VARIANTS, FIELD_TYPES, OFFICIAL_COMPONENT_KEYS, type CreateToonUIOptions, type ReplyPayload, type SubmitPayload, type ToonChatMessage, type ToonChatUIMessage, type ToonComponentRegistry, type ToonInteractionPayload, type ToonProtocol, type ToonRules, type ToonRuntime } from './types';
+import { ALERT_VARIANTS, BADGE_VARIANTS, BUTTON_VARIANTS, CHART_TYPES, CONFIRM_VARIANTS, FIELD_TYPES, OFFICIAL_COMPONENT_KEYS, type CreateToonUIOptions, type ReplyPayload, type SubmitPayload, type ToonChatMessage, type ToonChatUIMessage, type ToonComponentRegistry, type ToonInteractionPayload, type ToonProtocol, type ToonRules, type ToonRuntime } from './types';
 
 function createEventId(prefix: string): string {
   return `${prefix}_${Math.random().toString(36).slice(2, 10)}`;
@@ -24,7 +24,9 @@ export function createRules(): ToonRules {
     buttonVariants: BUTTON_VARIANTS,
     badgeVariants: BADGE_VARIANTS,
     alertVariants: ALERT_VARIANTS,
+    confirmVariants: CONFIRM_VARIANTS,
     fieldTypes: FIELD_TYPES,
+    chartTypes: CHART_TYPES,
   };
 }
 

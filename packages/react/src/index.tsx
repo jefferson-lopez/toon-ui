@@ -639,8 +639,8 @@ function presetTone(variant?: string): React.CSSProperties {
     case 'success':
     case 'info':
       return { background: '#111827', color: '#ffffff' };
-    case 'secondary':
     case 'neutral':
+    case 'secondary':
       return { background: '#e5e7eb', color: '#111827' };
     case 'danger':
       return { background: '#dc2626', color: '#ffffff' };
@@ -652,6 +652,22 @@ function presetTone(variant?: string): React.CSSProperties {
     default:
       return { background: '#f3f4f6', color: '#111827' };
   }
+}
+
+function createPresetSurface(variant?: string): React.CSSProperties {
+  const tone = presetTone(variant);
+  return {
+    border: `1px solid ${variant === 'danger' ? '#fca5a5' : variant === 'warning' ? '#fcd34d' : variant === 'success' ? '#86efac' : variant === 'info' ? '#93c5fd' : '#e5e7eb'}`,
+    borderRadius: 12,
+    padding: 16,
+    display: 'grid',
+    gap: 12,
+    width: '100%',
+    minWidth: 0,
+    boxSizing: 'border-box',
+    background: tone.background === 'transparent' ? '#ffffff' : tone.background,
+    color: tone.color,
+  };
 }
 
 export function basicPreset(): ToonReactComponentRegistry {
@@ -677,25 +693,25 @@ export function basicPreset(): ToonReactComponentRegistry {
       </label>
     ),
     card: ({ node, children }: ToonCardComponentProps) => (
-      <section style={{ border: '1px solid #e5e7eb', borderRadius: 12, padding: 16, display: 'grid', gap: 12, width: '100%', minWidth: 0, boxSizing: 'border-box' }}>
+      <section style={createPresetSurface()}>
         <strong>{node.title}</strong>
         {children}
       </section>
     ),
     confirm: ({ node, children }: ToonConfirmComponentProps) => (
-      <section style={{ border: '1px solid #fca5a5', borderRadius: 12, padding: 16, display: 'grid', gap: 12, width: '100%', minWidth: 0, boxSizing: 'border-box' }}>
+      <section style={createPresetSurface(node.variant)}>
         <strong>{node.title}</strong>
         {children}
       </section>
     ),
     form: ({ node, children }: ToonFormComponentProps) => (
-      <section style={{ border: '1px solid #e5e7eb', borderRadius: 12, padding: 16, display: 'grid', gap: 12, width: '100%', minWidth: 0, boxSizing: 'border-box' }}>
+      <section style={createPresetSurface()}>
         <strong>{node.title}</strong>
         {children}
       </section>
     ),
     item: ({ node, children }: ToonItemComponentProps) => (
-      <section style={{ border: '1px solid #e5e7eb', borderRadius: 12, padding: 16, display: 'grid', gap: 12, width: '100%', minWidth: 0, boxSizing: 'border-box' }}>
+      <section style={createPresetSurface()}>
         <strong>{node.title}</strong>
         {children}
       </section>
@@ -707,7 +723,7 @@ export function basicPreset(): ToonReactComponentRegistry {
       </section>
     ),
     alert: ({ node, children }: ToonAlertComponentProps) => (
-      <section style={{ ...presetTone(node.variant), borderRadius: 12, padding: 16, display: 'grid', gap: 12, width: '100%', minWidth: 0, boxSizing: 'border-box' }}>
+      <section style={createPresetSurface(node.variant)}>
         <strong>{node.title}</strong>
         {children}
       </section>
