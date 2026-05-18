@@ -434,12 +434,12 @@ pnpm --filter @examples/next-ai-sdk dev
 
 ---
 
-## Version 1.2.0
+## Version 1.2.2
 
-This release line expands ToonUI from a small semantic subset into a much richer UI-first protocol:
+This patch release stabilizes the new 1.2 line and improves the end-to-end developer experience:
 
-- expanded semantic catalog with components such as `heading`, `separator`, `empty`, `tabs`, `accordion`, `dialog`, `sheet`, `popover`, `tooltip`, `progress`, `loading`, `toast`, `breadcrumb`, `pagination`, `menu`, `command`, and `chart`
-- richer `field` support with new types like `radio`, `switch`, `combobox`, `otp`, `slider`, and `multiselect`
-- `confirm` now supports semantic variants such as `neutral`, `warning`, and `danger` instead of being implicitly destructive
-- improved prompt guidance so the AI prefers structured ToonUI when it can reduce back-and-forth, especially for forms and data collection
-- chart semantics in the DSL so the AI can express comparisons and trends directly in ToonUI
+- fixed numeric attribute parsing for DSL nodes like `progress` and `pagination`
+- stronger prompt rules, examples, anti-examples, and self-checks for strict components like `alert`, `empty`, `progress`, and `pagination`
+- a new playground showcase loader to preview the broader semantic catalog quickly
+- broader React fallback rendering so more of the v1.2 semantic nodes can be inspected end-to-end in the playground
+- rebuilt package outputs so linked consumers like the playground use the corrected parser and renderer behavior

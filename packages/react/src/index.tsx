@@ -20,7 +20,7 @@ import type {
 } from '@toon-ui/core';
 import { createToonCoreRuntime } from '@toon-ui/core';
 
-export type ToonFieldValue = string | number | boolean;
+export type ToonFieldValue = string | number | boolean | string[];
 
 export type ToonReplyPayload = ReplyPayload & {
   node: ButtonNode;
@@ -269,17 +269,22 @@ export function getToonCheckboxProps({
 }
 
 function getDefaultFieldValue(field: FieldNode): ToonFieldValue {
-  return field.fieldType === 'checkbox' ? false : '';
+  if (field.fieldType === 'checkbox' || field.fieldType === 'switch') return false;
+  if (field.fieldType === 'multiselect') return [];
+  return '';
 }
 
 function normalizeFieldValue(field: FieldNode, value: ToonFieldValue): ToonFieldValue {
-  if (field.fieldType === 'number') {
+  if (field.fieldType === 'number' || field.fieldType === 'slider') {
     if (typeof value === 'number') return value;
     const parsed = Number(value);
     return Number.isNaN(parsed) ? value : parsed;
   }
-  if (field.fieldType === 'checkbox') {
+  if (field.fieldType === 'checkbox' || field.fieldType === 'switch') {
     return Boolean(value);
+  }
+  if (field.fieldType === 'multiselect') {
+    return Array.isArray(value) ? value : String(value).split(',').map((entry) => entry.trim()).filter(Boolean);
   }
   return value;
 }
@@ -404,6 +409,15 @@ function renderFallback(node: ToonNode, children: React.ReactNode, form: FormNod
   switch (node.type) {
     case 'text':
       return <p key={key} style={{ margin: 0 }}>{node.value}</p>;
+    case 'heading':
+      if (node.level === 1) return <h1 key={key} style={{ margin: 0 }}>{node.text}</h1>;
+      if (node.level === 2) return <h2 key={key} style={{ margin: 0 }}>{node.text}</h2>;
+      if (node.level === 3) return <h3 key={key} style={{ margin: 0 }}>{node.text}</h3>;
+      if (node.level === 4) return <h4 key={key} style={{ margin: 0 }}>{node.text}</h4>;
+      if (node.level === 5) return <h5 key={key} style={{ margin: 0 }}>{node.text}</h5>;
+      return <h6 key={key} style={{ margin: 0 }}>{node.text}</h6>;
+    case 'separator':
+      return <hr key={key} style={{ width: '100%', border: 0, borderTop: '1px solid #d1d5db' }} />;
     case 'badge':
       return <span key={key} style={{ display: 'inline-flex', width: 'fit-content' }}>{node.label}</span>;
     case 'button':
@@ -421,14 +435,33 @@ function renderFallback(node: ToonNode, children: React.ReactNode, form: FormNod
       return (
         <label key={key} style={createSurfaceStyle(6)}>
           {node.label}
-          <input
-            name={node.name}
-            disabled={blockResolved}
-            placeholder={node.placeholder}
-            style={{ width: '100%', minWidth: 0, boxSizing: 'border-box' }}
-            value={String(context.getFieldValue(form, node) ?? '')}
-            onChange={(event) => blockResolved ? undefined : context.setFieldValue(form, node, event.target.value)}
-          />
+          {node.fieldType === 'textarea' ? (
+            <textarea
+              name={node.name}
+              disabled={blockResolved}
+              placeholder={node.placeholder}
+              style={{ width: '100%', minWidth: 0, boxSizing: 'border-box' }}
+              value={String(context.getFieldValue(form, node) ?? '')}
+              onChange={(event) => blockResolved ? undefined : context.setFieldValue(form, node, event.target.value)}
+            />
+          ) : node.fieldType === 'checkbox' ? (
+            <input
+              type="checkbox"
+              name={node.name}
+              disabled={blockResolved}
+              checked={Boolean(context.getFieldValue(form, node))}
+              onChange={(event) => blockResolved ? undefined : context.setFieldValue(form, node, event.target.checked)}
+            />
+          ) : (
+            <input
+              name={node.name}
+              disabled={blockResolved}
+              placeholder={node.placeholder}
+              style={{ width: '100%', minWidth: 0, boxSizing: 'border-box' }}
+              value={Array.isArray(context.getFieldValue(form, node)) ? (context.getFieldValue(form, node) as string[]).join(', ') : String(context.getFieldValue(form, node) ?? '')}
+              onChange={(event) => blockResolved ? undefined : context.setFieldValue(form, node, event.target.value)}
+            />
+          )}
         </label>
       );
     case 'card':
@@ -436,11 +469,80 @@ function renderFallback(node: ToonNode, children: React.ReactNode, form: FormNod
     case 'form':
     case 'item':
     case 'alert':
+    case 'empty':
+    case 'dialog':
+    case 'sheet':
+    case 'popover':
       return <section key={key} style={surfaceStyle}><strong>{node.title}</strong><div style={nestedBlockStyle}>{children}</div></section>;
     case 'list':
+    case 'tabs':
+    case 'accordion':
+    case 'menu':
+    case 'command':
       return <section key={key} style={surfaceStyle}><strong>{node.title}</strong><div style={nestedBlockStyle}>{children}</div></section>;
+    case 'tab':
+      return <section key={key} style={createSurfaceStyle(8, { border: '1px solid #e5e7eb', borderRadius: 10, padding: 12 })}><strong>{node.label}</strong><div style={nestedBlockStyle}>{children}</div></section>;
+    case 'section':
+      return <section key={key} style={createSurfaceStyle(8, { border: '1px solid #e5e7eb', borderRadius: 10, padding: 12 })}><strong>{node.title}</strong><div style={nestedBlockStyle}>{children}</div></section>;
+    case 'series':
+      return <section key={key} style={createSurfaceStyle(8, { border: '1px solid #e5e7eb', borderRadius: 10, padding: 12 })}><strong>{node.label}</strong><div style={nestedBlockStyle}>{children}</div></section>;
+    case 'tooltip':
+      return <span key={key} style={{ display: 'inline-flex', width: 'fit-content', padding: '4px 8px', borderRadius: 999, background: '#111827', color: '#fff' }}>{node.text}</span>;
+    case 'progress':
+      return (
+        <div key={key} style={surfaceStyle}>
+          <strong>{node.label}</strong>
+          <progress value={node.value} max={node.max} style={{ width: '100%' }} />
+          <span>{node.value}/{node.max}</span>
+        </div>
+      );
+    case 'loading':
+      return <div key={key} style={surfaceStyle}><strong>Cargando</strong><span>{node.text}</span></div>;
+    case 'toast':
+      return <div key={key} style={createSurfaceStyle(6, { border: '1px solid #d1d5db', borderRadius: 10, padding: 12 })}><strong>{node.variant.toUpperCase()}</strong><span>{node.text}</span></div>;
+    case 'breadcrumb':
+      return <nav key={key} style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>{children}</nav>;
+    case 'crumb':
+      return <span key={key} style={{ color: '#4b5563' }}>{node.label}</span>;
+    case 'pagination':
+      return <div key={key} style={{ display: 'flex', gap: 8, alignItems: 'center' }}><strong>Página</strong><span>{node.page} de {node.totalPages}</span></div>;
+    case 'action':
+      return (
+        <button
+          key={key}
+          type="button"
+          disabled={blockResolved}
+          onClick={() => blockResolved ? undefined : node.action.kind === 'reply' ? context.sendReply({ kind: 'ui_reply', eventId: createEventId('reply'), source: 'button', component: 'button', value: node.action.value, line: node.line, node: node as never }) : form ? context.submitForm(form) : undefined}
+        >
+          {node.label}
+        </button>
+      );
     case 'table':
       return <pre key={key}>{JSON.stringify({ columns: node.columns, rows: node.rows }, null, 2)}</pre>;
+    case 'chart':
+      return (
+        <section key={key} style={surfaceStyle}>
+          <strong>{node.title}</strong>
+          <div style={nestedBlockStyle}>
+            {node.children.map((series) => (
+              <div key={`${series.label}-${series.line}`} style={createSurfaceStyle(6, { border: '1px solid #e5e7eb', borderRadius: 10, padding: 12 })}>
+                <strong>{series.label}</strong>
+                {series.children.map((point) => (
+                  <div key={`${point.label}-${point.line}`} style={{ display: 'grid', gap: 4 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+                      <span>{point.label}</span>
+                      <span>{point.value}</span>
+                    </div>
+                    <div style={{ height: 8, background: '#e5e7eb', borderRadius: 999 }}>
+                      <div style={{ width: `${Math.max(4, Math.min(100, point.value))}%`, height: '100%', background: '#111827', borderRadius: 999 }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        </section>
+      );
     default:
       return null;
   }
@@ -534,7 +636,7 @@ function RegisteredNode({ node, form, nodeKey, blockId }: { node: ToonNode; form
       return Component ? <Component node={node} context={context} disabled={blockResolved} /> : renderFallback(node, children, activeForm, context, nodeKey, blockResolved);
     }
     default:
-      return null;
+      return renderFallback(node, children, activeForm, context, nodeKey, blockResolved);
   }
 }
 

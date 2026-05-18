@@ -74,7 +74,7 @@ function getStringAttribute(input: string, name: string): string | undefined {
 }
 
 function getNumberAttribute(input: string, name: string): number | undefined {
-  const value = input.match(new RegExp(`${name}=([^\s]+)`))?.[1];
+  const value = input.match(new RegExp(`${name}=([^\\s]+)`))?.[1];
   if (value === undefined) return undefined;
   const parsed = Number(value);
   return Number.isNaN(parsed) ? undefined : parsed;

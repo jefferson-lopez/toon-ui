@@ -81,6 +81,7 @@ export function createCompositionPrompt(): string {
     '- Use loading, progress, and toast for system state and feedback when relevant.',
     '- Use breadcrumb and pagination only when the user is navigating a larger result space.',
     '- Use chart only when the user needs trend or comparison understanding; otherwise prefer table for precise values.',
+    '- For strict components like alert, empty, progress, and pagination, prefer copying the canonical example shape exactly instead of improvising shorthand.',
   ].join('\n');
 }
 
@@ -118,6 +119,22 @@ export function createDecisionPrompt(): string {
     '- If the user must choose among actions, prefer menu or command over prose bullet lists.',
     '- If the user needs hierarchical or dense detail, prefer tabs or accordion over a wall of text.',
     '- If the user asks for analytics, trends, or comparison, prefer chart plus optional supporting table.',
+    '- If you need a callout block with explanation, use alert <variant> "Title": with nested children, not a one-line shorthand.',
+    '- If you need an empty state, use empty "Title": with at least one nested text or action node.',
+    '- If you need numeric progress, use progress "Label" value=<number> max=<number> exactly.',
+    '- If you need page navigation, use pagination page=<number> totalPages=<number> exactly.',
+  ].join('\n');
+}
+
+export function createSelfCheckPrompt(): string {
+  return [
+    'Before emitting ToonUI, run this syntax self-check:',
+    '- alert always needs: variant + quoted title + trailing colon + nested children',
+    '- empty always needs: quoted title + trailing colon + nested children',
+    '- progress always needs: quoted label + value=<number> + max=<number>',
+    '- pagination always needs: page=<number> + totalPages=<number>',
+    '- If a node requires children, do NOT emit it as a one-line leaf node.',
+    '- If you are unsure about a new component syntax, fall back to card, text, table, form, confirm, or list instead of inventing invalid shorthand.',
   ].join('\n');
 }
 
@@ -160,6 +177,25 @@ export function createExamplesPrompt(): string {
     '```',
     '',
     '```toon-ui',
+    'alert warning "Low stock":',
+    '  text "Only 3 units remain in the warehouse."',
+    '```',
+    '',
+    '```toon-ui',
+    'empty "No customers found":',
+    '  text "Try another search term or create a new customer."',
+    '  button secondary "Create customer" reply="Create customer"',
+    '```',
+    '',
+    '```toon-ui',
+    'progress "Inventory sync" value=65 max=100',
+    '```',
+    '',
+    '```toon-ui',
+    'pagination page=2 totalPages=8',
+    '```',
+    '',
+    '```toon-ui',
     'chart bar "Weekly sales" x="Day" y="Revenue":',
     '  series "Store A":',
     '    point "Mon" 1200',
@@ -180,6 +216,10 @@ export function createExamplesPrompt(): string {
     '- header "Customer"  -> INVALID because header is not an allowed component',
     '- card:             -> INVALID because card requires a quoted title',
     '- badge success "Customer" -> INVALID because badge syntax is badge "Label" variant',
+    '- alert "Low stock" -> INVALID because alert requires a variant and nested block',
+    '- empty "No data" -> INVALID because empty requires a nested block after :',
+    '- progress 65 -> INVALID because progress requires a quoted label plus value= and max=',
+    '- pagination 2/8 -> INVALID because pagination requires page= and totalPages=',
     '- confirm "Delete customer?": -> VALID for backward compatibility, but prefer confirm danger|warning|neutral "Title":',
     '- form "Customer": with no submit button -> INVALID',
     '- row: May 09, $ 8,155.35, Completed -> RISKY because commas inside values can break the table unless cells are quoted',
@@ -212,6 +252,8 @@ export function createPrompt(rules: ToonRules): string {
     createSafetyPrompt(),
     '',
     createDecisionPrompt(),
+    '',
+    createSelfCheckPrompt(),
     '',
     createExamplesPrompt(),
   ].join('\n');
