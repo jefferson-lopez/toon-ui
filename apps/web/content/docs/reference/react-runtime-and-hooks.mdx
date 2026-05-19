@@ -221,6 +221,72 @@ High-level component that renders assistant content containing normal markdown p
 
 Use it when you want the best default integration path.
 
+### Quick path
+
+```tsx
+import { ToonMessage, createToonClient } from '@toon-ui/toon-ui';
+
+const toon = createToonClient();
+
+<ToonMessage
+  content={assistantContent}
+  runtime={toon}
+  onReply={(payload) => append(toon.messages.toUIMessage(payload))}
+  onSubmit={(payload) => append(toon.messages.toUIMessage(payload))}
+/>
+```
+
+This component does two jobs for you:
+
+- renders normal markdown from the assistant
+- renders fenced `toon-ui` blocks in the same message
+
+### `renderMarkdown`
+
+`ToonMessage` also accepts `renderMarkdown?: (markdown: string) => ReactNode`.
+
+Use it when:
+
+- you want a custom markdown renderer
+- you want your own typography or prose styles
+- you want to plug ToonUI into another chat shell
+
+```tsx
+<ToonMessage
+  content={assistantContent}
+  runtime={toon}
+  renderMarkdown={(markdown) => <MyMarkdownRenderer>{markdown}</MyMarkdownRenderer>}
+  onReply={(payload) => append(toon.messages.toUIMessage(payload))}
+  onSubmit={(payload) => append(toon.messages.toUIMessage(payload))}
+/>
+```
+
+Practical rule:
+
+- keep `ToonMessage` if you want mixed markdown + ToonUI in one place
+- switch only `renderMarkdown` when the chat shell changes
+
+### Interaction reinjection
+
+When a user clicks a ToonUI button or submits a ToonUI form, the payload is typed.
+
+For UI/chat state:
+
+```tsx
+onReply={(payload) => append(toon.messages.toUIMessage(payload))}
+onSubmit={(payload) => append(toon.messages.toUIMessage(payload))}
+```
+
+For model-loop integration:
+
+```tsx
+const next = toon.messages.toModelMessage(payload);
+```
+
+Use `toUIMessage()` when the next step is showing a user-visible message.
+
+Use `toModelMessage()` when the next step is feeding the interaction back into your LLM loop.
+
 ## `basicPreset()`
 
 Returns the built-in default React component registry used by the default adapter path.

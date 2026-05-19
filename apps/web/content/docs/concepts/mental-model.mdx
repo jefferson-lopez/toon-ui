@@ -1,100 +1,131 @@
 ---
 title: "Mental Model"
-description: "The conceptual model you should teach before talking about styling or components."
+description: "Understand the core idea behind ToonUI before thinking about components, styling, or adapters."
 ---
 
-If you teach ToonUI starting from buttons, fields, or CSS, you are teaching it backwards.
+If you start by thinking about buttons, cards, or CSS, you are already one layer too low.
 
-Teach THESE objects first:
+Start with the core idea:
 
-- `toon.catalog`
-- `toon.events`
-- `toon.messages`
-- `toon.parse()`
-- `toon.validate()`
-- `toon.extractBlocks()`
+> ToonUI is a contract for UI intent between the model and your application.
 
-The runtime owns UI intent. The host app owns business behavior.
+## The one-sentence model
+
+The model describes the interface.
+
+Your app decides what that interface means.
+
+That is the whole system.
 
 ## The three layers
 
 | Layer | Meaning | Owned by |
 |---|---|---|
-| Language | What the model is allowed to emit | `@toon-ui/core` |
-| Rendering | How structured nodes become React UI | `@toon-ui/react` or `@toon-ui/toon-ui` |
-| Behavior | What happens after user interaction | Your app |
+| Language | What the model is allowed to describe | `@toon-ui/core` |
+| Rendering | How that description becomes UI | `@toon-ui/react` or `@toon-ui/toon-ui` |
+| Behavior | What happens after interaction | Your app |
 
-## The public objects
+## Why this matters
+
+Without this separation, AI apps tend to collapse concerns together:
+
+- prompt rules start carrying product logic
+- rendering becomes tightly coupled to one demo
+- user actions become hard to normalize
+- trust boundaries become blurry
+
+ToonUI exists to keep those layers separate ON PURPOSE.
+
+## The public objects to teach first
 
 ### `toon.catalog`
 
-This is the language contract:
+The language contract.
+
+Use it to understand:
 
 - available components
-- supported variants
+- valid variants
 - supported field types
-- examples of valid and invalid output
-
-Use it when you need inspectable documentation or tooling around the language.
+- the shape of the language itself
 
 ### `toon.events`
 
-This is the interaction creation API.
+The interaction factory.
 
-Use it to build normalized reply or submit payloads:
+Use it to create normalized:
 
-- `toon.events.reply(...)`
-- `toon.events.submit(...)`
+- reply payloads
+- submit payloads
 
 ### `toon.messages`
 
-This is the reinjection API.
+The reinjection layer.
 
 Use it to convert interaction payloads into:
 
-- compact content strings for the model
-- display content for UI
-- UI message objects for chat state
+- model-friendly content
+- UI-friendly display content
+- chat message objects
 
-### `toon.parse()`
+### `toon.parse()` and `toon.validate()`
 
-Parses a ToonUI document into an AST.
+The inspection and safety layer.
 
-Use it when:
+Use them when you need to:
 
-- debugging generation
-- building tooling
-- validating fixtures before rendering
-
-### `toon.validate()`
-
-Validates the AST against syntax and semantic rules.
-
-Use it before trusting generated structure.
+- debug generation
+- validate fixtures
+- verify output before trusting it
 
 ### `toon.extractBlocks()`
 
-Separates fenced `toon-ui` blocks from normal markdown content.
+The separation layer.
 
-Use it when you need to render narrative copy and structured UI together.
+Use it when you want to split:
 
-## The most important boundary
+- normal markdown
+- structured ToonUI blocks
+
+## The key boundary
 
 ToonUI is NOT an application framework.
 
 It does not own:
 
-- data fetching
+- tools
+- persistence
 - authorization
 - mutations
-- persistence
-- tool execution
-- product decisions
+- workflows
+- business rules
 
-It gives you a typed UI language and a safe interaction loop.
+It gives you a typed language for interface intent and a clean path back into your application loop.
 
-## Read next
+## Practical example
 
-1. [Boundaries](/docs/architecture/boundaries)
-2. [Syntax](/docs/language/syntax)
+If the model emits:
+
+```txt
+button secondary "Open details" reply="open:customer-42"
+```
+
+Then:
+
+- ToonUI knows how to parse and render that
+- ToonUI knows how to create the interaction payload
+- your app decides whether that action fetches data, opens a modal, checks auth, or gets rejected
+
+That is a clean architecture boundary.
+
+## What to remember
+
+If you forget everything else, remember this:
+
+> ToonUI helps the model paint the interface, not run the product.
+
+## Next step
+
+1. [Why use ToonUI?](/docs)
+2. [Boundaries](/docs/architecture/boundaries)
 3. [@toon-ui/toon-ui](/docs/packages/toon-ui)

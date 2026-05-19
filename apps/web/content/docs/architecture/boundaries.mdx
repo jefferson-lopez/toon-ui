@@ -1,44 +1,87 @@
 ---
 title: "Boundaries"
-description: "What ToonUI owns and what must stay in the host application."
+description: "See exactly what ToonUI owns and what must stay inside the host application."
 ---
 
-The main architectural mistake people make is trying to turn ToonUI into an app framework.
+The most common architectural mistake is trying to turn ToonUI into a workflow engine.
 
-It is NOT.
+Do NOT do that.
 
-## Ownership boundaries
+## Ownership map
 
 | ToonUI owns | Host app owns |
 |---|---|
 | Protocol and grammar | Business workflows |
 | Parser and validator | Tool execution |
 | Prompt helpers | Auth and authorization |
-| Rendering primitives | Persistence |
-| Adapter contract | API orchestration |
-| Event/message conversion | Domain rules |
+| Rendering runtime | Persistence |
+| Event/message conversion | API orchestration |
+| Adapter contract | Domain rules |
 
-## Why this boundary matters
+## Why the boundary exists
 
-If prompts start deciding product behavior, you lose:
+If prompts start deciding product behavior, you lose clarity FAST.
+
+You also lose:
 
 - testability
-- security clarity
+- security boundaries
+- explicit ownership
 - maintainable architecture
 
-The model should describe an interaction surface.
-Your application should decide what that interaction means.
+The model should describe the interaction surface.
+
+Your application should decide what that interaction actually does.
 
 ## Good boundary example
 
-- model emits `button secondary "Open" reply="open:customer-42"`
-- ToonUI renders the button
-- user clicks it
-- your app receives a structured reply payload
-- your app decides whether to fetch, reject, log, or transform that action
+Model output:
 
-## Read next
+```txt
+button secondary "Open customer" reply="open:customer-42"
+```
+
+Then the flow is:
+
+1. ToonUI parses the button
+2. ToonUI renders the button
+3. the user clicks it
+4. ToonUI creates a typed payload
+5. your app decides whether to fetch data, deny access, log the action, or open a new UI state
+
+That is the correct split of responsibility.
+
+## Bad boundary example
+
+Bad mindset:
+
+- "the model executes the customer workflow"
+- "the ToonUI block decides mutations"
+- "the prompt owns behavior"
+
+If that happens, you no longer have a UI protocol.
+
+You have hidden application logic inside generation.
+
+That is fragile, hard to test, and hard to trust.
+
+## Design rule
+
+Use ToonUI for:
+
+- expressing interface intent
+- structuring AI responses
+- capturing user intent cleanly
+
+Use your app for:
+
+- deciding behavior
+- calling tools
+- enforcing permissions
+- managing product state
+
+## Next step
 
 1. [Package Architecture](/docs/architecture/package-architecture)
-2. [Syntax](/docs/language/syntax)
-3. [@toon-ui/toon-ui](/docs/packages/toon-ui)
+2. [Events and Messages](/docs/reference/events-and-messages)
+3. [Protocol and Types](/docs/reference/protocol-and-types)

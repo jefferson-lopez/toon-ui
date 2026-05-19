@@ -1,24 +1,45 @@
 ---
 title: "Quickstart"
-description: "The shortest end-to-end path from server prompt to rendered UI and interaction reinjection."
+description: "The fastest path from ToonUI install to a working AI-native UI flow."
 ---
 
-This page shows the real happy path:
+This is the shortest happy path:
 
 1. create the protocol on the server
-2. inject the prompt into the model
-3. render assistant output on the client
-4. capture reply/submit interactions
-5. reinsert those interactions into your app loop
+2. inject the ToonUI prompt into the model
+3. render the assistant output on the client
+4. turn clicks and submits into structured app input
 
-## End-to-end flow
+## What you are building
+
+After this page, you should have:
+
+- a model that can emit `toon-ui` blocks
+- a client that can render them
+- typed interactions that return to your chat or app loop
+- a cleaner UX than plain text alone
+
+## Server: teach the model the language
 
 ```ts
 import { createToonProtocol } from '@toon-ui/core';
 
-const protocol = createToonProtocol();
-const system = [protocol.prompt, 'Available tools:', '- searchProducts(query)'].join('\n\n');
+const toon = createToonProtocol();
+
+const system = [
+  toon.prompt,
+  'You are helping users compare products.',
+  'Use ToonUI when structured UI reduces friction.',
+  'Available tools:',
+  '- searchProducts(query)',
+].join('\n\n');
 ```
+
+This does ONE important thing:
+
+it teaches the model how to describe UI without giving it control of your application.
+
+## Client: render assistant output
 
 ```tsx
 'use client';
@@ -45,140 +66,56 @@ export function AssistantMessage({
 }
 ```
 
-## Full example with server and client
+This renders mixed assistant output:
 
-### Server
-
-```ts
-import { createToonProtocol } from '@toon-ui/core';
-
-const toon = createToonProtocol();
-
-export async function buildMessages(userInput: string) {
-  return [
-    {
-      role: 'system',
-      content: [
-        toon.prompt,
-        'You are assisting with product search and creation.',
-        'Use ToonUI when structured UI reduces friction.',
-        'Available tools:',
-        '- searchProducts(query)',
-        '- createProduct(input)',
-      ].join('\n\n'),
-    },
-    {
-      role: 'user',
-      content: userInput,
-    },
-  ];
-}
-```
-
-### Client
-
-```tsx
-'use client';
-
-import { useState } from 'react';
-import { ToonMessage, createToonClient, type ToonChatUIMessage } from '@toon-ui/toon-ui';
-
-const toon = createToonClient();
-
-export function ChatExample({
-  assistantContent,
-}: {
-  assistantContent: string;
-}) {
-  const [messages, setMessages] = useState<ToonChatUIMessage[]>([]);
-
-  function append(message: ToonChatUIMessage) {
-    setMessages((current) => [...current, message]);
-  }
-
-  return (
-    <div>
-      <ToonMessage
-        content={assistantContent}
-        runtime={toon}
-        onReply={(payload) => append(toon.messages.toUIMessage(payload))}
-        onSubmit={(payload) => append(toon.messages.toUIMessage(payload))}
-      />
-
-      <pre>{JSON.stringify(messages, null, 2)}</pre>
-    </div>
-  );
-}
-```
-
-## What happens in this example
-
-1. The server creates the protocol.
-2. The protocol prompt teaches the model the ToonUI language.
-3. The model returns markdown plus fenced `toon-ui` blocks.
-4. `ToonMessage` renders those blocks.
-5. Clicking a button or submitting a form emits a structured payload.
-6. `toon.messages.toUIMessage(payload)` converts that payload back into message state your app can append.
+- normal markdown
+- fenced `toon-ui` blocks
+- reply and submit interactions
 
 ## Example model output
 
 ````md
-I found one matching product.
+I found two strong options for your team.
 
 ```toon-ui
-card "Product found":
-  text "Toon Mug"
-  badge "In stock" success
-  button secondary "Open details" reply="open:toon-mug"
+card "Recommended plans":
+  text "Choose the plan that best fits your current growth stage."
+  button secondary "Compare plans" reply="compare:plans"
+  button primary "Talk to sales" reply="sales:contact"
 ```
 ````
 
-## Reply and submit reinjection
+## What happens next
 
-You usually have two reinjection targets:
+1. the model emits a ToonUI block
+2. `ToonMessage` renders it
+3. the user clicks a button or submits a form
+4. ToonUI creates a typed payload
+5. your app decides what to do with that payload
+
+That last step is the boundary that matters.
+
+## Reinject interactions into your app loop
+
+Most apps use one of these two reinjection paths:
 
 | API | Use it when |
 |---|---|
-| `toon.messages.toUIMessage(payload)` | Your chat UI stores message objects/parts |
-| `toon.messages.toModelMessage(payload)` | Your app needs the normalized content string for the model loop |
+| `toon.messages.toUIMessage(payload)` | Your UI stores chat/message objects |
+| `toon.messages.toModelMessage(payload)` | The next step goes back to the LLM loop |
 
-## Reinjection with model loop
-
-If your next step is sending the interaction back to the LLM:
+Example:
 
 ```ts
 onReply={(payload) => {
-  const message = toon.messages.toModelMessage(payload);
-  sendToModel(message);
+  const next = toon.messages.toModelMessage(payload);
+  sendToModel(next);
 }}
 ```
 
-The returned object includes:
+## Validate before trusting output
 
-- `content` — normalized compact user intent
-- `displayContent` — UI-friendly display text
-- `payload` — original typed payload
-
-## Rendering narrative markdown separately
-
-If you want to render normal markdown outside the structured block:
-
-```tsx
-import { ToonRenderer, createToonClient, extractToonMarkdown } from '@toon-ui/toon-ui';
-
-const toon = createToonClient();
-
-const plainMarkdown = extractToonMarkdown(content);
-```
-
-Use this when:
-
-- your app renders assistant prose in one area
-- the ToonUI block should appear in a dedicated panel or section
-
-## Validation before trusting generated output
-
-If you are building a stricter pipeline:
+If your app needs stricter guarantees, validate the generated block before rendering or persisting it.
 
 ```ts
 const blocks = toon.extractBlocks(content);
@@ -193,68 +130,47 @@ for (const block of blocks) {
 }
 ```
 
-This is especially useful for:
+Use this for:
 
-- testing
+- tests
 - fixtures
-- debugging model output
-- server-side safety checks
+- server-side checks
+- debugging generation quality
 
-## Quickstart with explicit React adapter
+## When to switch to `@toon-ui/react`
 
-If you want adapter ownership from day one:
+Stay on `@toon-ui/toon-ui` if you want the fastest path.
 
-```tsx
-import {
-  ToonMessage,
-  createToonReactAdapter,
-  createToonReactRuntime,
-  getToonButtonProps,
-  type ToonButtonComponentProps,
-} from '@toon-ui/react';
+Move to `@toon-ui/react` when you need:
 
-function MyButton(props: ToonButtonComponentProps) {
-  return <button {...getToonButtonProps(props)}>{props.node.label}</button>;
-}
+- explicit adapter ownership
+- custom components
+- stricter design-system control
 
-const adapter = createToonReactAdapter({
-  level: 'default',
-  components: {
-    button: MyButton,
-  },
-});
+## Success checklist
 
-const toon = createToonReactRuntime({ adapter });
-```
-
-## What you should have working after this page
-
-- [ ] server prompt includes `toon.prompt`
-- [ ] client runtime is created
-- [ ] assistant content renders through `ToonMessage` or `ToonRenderer`
+- [ ] `toon.prompt` is in the system prompt
+- [ ] `createToonClient()` is running on the client
+- [ ] assistant content renders through `ToonMessage`
 - [ ] reply actions produce payloads
-- [ ] form submits produce payloads
-- [ ] your app can convert payloads into UI messages or model messages
+- [ ] submit actions produce payloads
+- [ ] your app handles the next step after interaction
 
 ## What NOT to do
 
-Do NOT put business logic inside the ToonUI block.
+Do NOT put business logic inside ToonUI blocks.
 
-Bad mindset:
+Wrong mindset:
 
-- “the model executes the workflow”
+- "the model executes the workflow"
 
 Correct mindset:
 
-- “the model describes an interaction surface”
-- “the host app decides what the interaction actually does”
+- "the model describes the interaction surface"
+- "the host app owns behavior"
 
 ## Next step
 
-After this works, read:
-
-- [Mental Model](/docs/concepts/mental-model)
-- [Boundaries](/docs/architecture/boundaries)
-- [Configuration](/docs/getting-started/configuration)
-- [Syntax](/docs/language/syntax)
-- [Events and Messages](/docs/reference/events-and-messages)
+1. [Mental Model](/docs/concepts/mental-model)
+2. [Boundaries](/docs/architecture/boundaries)
+3. [Configuration](/docs/getting-started/configuration)

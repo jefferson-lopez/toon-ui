@@ -1,83 +1,59 @@
 ---
 title: "@toon-ui/toon-ui"
-description: "The simplest client package with the default adapter already included."
+description: "The main client package for teams that want the fastest path to a working ToonUI integration."
 ---
 
-`@toon-ui/toon-ui` is the main public client package.
+`@toon-ui/toon-ui` is the easiest way to adopt ToonUI on the client.
 
-Use it when you want the easiest path:
+It is the package most teams should start with.
 
-- default adapter included
-- clean naming
-- access to the protocol and React runtime through one package
+## Why use `@toon-ui/toon-ui`?
 
-## Main exports
+Use it when you want:
+
+- the shortest path to production
+- the default adapter included
+- a clean public entry point
+- the option to customize later without starting from scratch
+
+## What it gives you
 
 - `createToonClient()`
 - `createToonAdapter()`
 - `ToonMessage`
 - `ToonRenderer`
-- `extractToonMarkdown`
-- all public exports from `@toon-ui/core`
-- all public exports from `@toon-ui/react`
+- `extractToonMarkdown()`
+- re-exports from `@toon-ui/core`
+- re-exports from `@toon-ui/react`
 
-## Main exports explained
-
-This is the part that usually gets documented badly, so let's make it explicit.
-
-### `createToonClient()`
-
-This is the main convenience entrypoint.
+## The happy path
 
 ```tsx
-import { createToonClient } from '@toon-ui/toon-ui';
+import { ToonMessage, createToonClient } from '@toon-ui/toon-ui';
 
 const toon = createToonClient();
 ```
 
-What it does:
+That one call gives you a working runtime with the default adapter.
 
-- creates a React runtime
-- uses a default adapter automatically if you do not pass one
-- gives you access to protocol APIs, parsing, validation, rendering, and interaction helpers through one runtime object
+## What `createToonClient()` really means
 
-What it is really wrapping:
+It is a convenience entry point over the React runtime.
 
-- `createToonReactAdapter({ level: 'default' })`
-- `createToonReactRuntime(...)`
+It lets you:
 
-Use it when:
+- render mixed assistant content
+- parse and validate blocks
+- handle reply and submit payloads
+- start simple before moving to deeper customization
 
-- you want the fastest correct setup
-- you do not want to wire `@toon-ui/react` manually yet
+## Best rendering component for most apps
 
-### `createToonAdapter()`
+Use `ToonMessage` when your assistant returns:
 
-This is an alias for the React adapter factory.
-
-```tsx
-import { createToonAdapter } from '@toon-ui/toon-ui';
-
-const adapter = createToonAdapter({
-  level: 'default',
-  components: {
-    button: MyButton,
-  },
-});
-```
-
-Use it when:
-
-- you are using `@toon-ui/toon-ui`
-- but still want to customize selected UI components
-
-Important detail:
-
-- in `@toon-ui/toon-ui`, `createToonAdapter()` is just a cleaner public alias over `createToonReactAdapter()`
-
-### `ToonMessage`
-
-High-level rendering component for mixed assistant content.
+- normal prose
+- markdown
+- `toon-ui` blocks
 
 ```tsx
 <ToonMessage
@@ -88,121 +64,19 @@ High-level rendering component for mixed assistant content.
 />
 ```
 
-What it does:
+## When to use `ToonRenderer`
 
-- extracts markdown from the response
-- extracts `toon-ui` blocks
-- renders normal markdown
-- renders the structured ToonUI block
-- wires reply and submit interactions
+Use `ToonRenderer` when you want lower-level control over where structured UI renders.
 
-Use it when:
+That is useful when:
 
-- your model returns normal prose plus UI blocks in the same message
-- you want the best default experience
+- prose renders elsewhere
+- the ToonUI block belongs in a dedicated panel
+- you want more layout control
 
-### `ToonRenderer`
+## When to customize the adapter
 
-Lower-level rendering component focused on the structured block.
-
-Use it when:
-
-- you want more control than `ToonMessage`
-- you already know where the structured content should render
-- you want to separate prose rendering from ToonUI rendering
-
-### `extractToonMarkdown`
-
-Utility that removes fenced `toon-ui` blocks from mixed content and leaves the normal markdown.
-
-```tsx
-import { extractToonMarkdown } from '@toon-ui/toon-ui';
-
-const markdown = extractToonMarkdown(content);
-```
-
-Use it when:
-
-- you want to render prose and structured UI in different places
-- you want custom markdown rendering
-
-### All public exports from `@toon-ui/core`
-
-This package re-exports the full public core surface.
-
-That means you can also access, from `@toon-ui/toon-ui`:
-
-- `createToonProtocol()`
-- `parseToonUI()`
-- `validateToonUI()`
-- `extractToonBlocks()`
-- `createPrompt()`
-- `createRules()`
-- all public types
-
-Why this matters:
-
-- `@toon-ui/toon-ui` acts as an umbrella client entrypoint
-- many apps can import most of what they need from one package
-
-### All public exports from `@toon-ui/react`
-
-This package also re-exports the React surface.
-
-That means you can also access:
-
-- `createToonReactAdapter()`
-- `createToonReactRuntime()`
-- `getToonButtonProps()`
-- `getToonInputProps()`
-- hooks like `useToonAction()`
-- component and adapter types
-
-Use this when you want:
-
-- the convenience of one package
-- but still need lower-level React control later
-
-## Practical decision rule
-
-Use:
-
-- `createToonClient()` if you want the easiest path
-- `createToonAdapter()` if you need light customization
-- `ToonMessage` if the model response mixes prose + ToonUI
-- `ToonRenderer` if you want lower-level rendering control
-- `extractToonMarkdown()` if you want to split prose from ToonUI yourself
-
-## Happy path
-
-```tsx
-'use client';
-
-import { ToonMessage, createToonClient } from '@toon-ui/toon-ui';
-
-const toon = createToonClient();
-
-export function AssistantMessage({
-  content,
-  append,
-}: {
-  content: string;
-  append: (message: unknown) => void;
-}) {
-  return (
-    <ToonMessage
-      content={content}
-      runtime={toon}
-      onReply={(payload) => append(toon.messages.toUIMessage(payload))}
-      onSubmit={(payload) => append(toon.messages.toUIMessage(payload))}
-    />
-  );
-}
-```
-
-## Partial customization
-
-The runtime keeps the resolved adapter on `toon.adapter`, so you can inspect what actually got registered.
+You can stay on `@toon-ui/toon-ui` and still override selected components.
 
 ```tsx
 import {
@@ -226,22 +100,24 @@ const adapter = createToonAdapter({
 const toon = createToonClient({ adapter });
 ```
 
-## When to use this package
+## When NOT to use this package
 
-Use `@toon-ui/toon-ui` when:
+Move to `@toon-ui/react` when you need:
 
-- you want the default adapter
-- you want to override only a few components
-- you want the cleanest public entry point
+- explicit adapter ownership
+- full control over component coverage
+- stricter design-system guarantees
 
-Use `@toon-ui/react` when:
+## Decision rule
 
-- you want explicit adapter ownership
-- you are integrating a real design system
-- you want tighter control over registration coverage
+Choose `@toon-ui/toon-ui` if your priority is:
 
-## Read next
+- speed first
+- low setup friction
+- safe defaults
+
+## Next step
 
 1. [@toon-ui/react](/docs/packages/react)
-2. [Events and Messages](/docs/reference/events-and-messages)
-3. [React Runtime and Hooks](/docs/reference/react-runtime-and-hooks)
+2. [React Runtime and Hooks](/docs/reference/react-runtime-and-hooks)
+3. [Events and Messages](/docs/reference/events-and-messages)

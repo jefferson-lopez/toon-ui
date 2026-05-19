@@ -1,56 +1,86 @@
 ---
 title: "Package Architecture"
-description: "How the public packages fit together in the recommended integration model."
+description: "Understand how the ToonUI packages fit together and which one to adopt first."
 ---
 
-Recommended composition:
+ToonUI is split by responsibility, not by marketing.
 
-- `@toon-ui/core` on the server
-- `@toon-ui/toon-ui` for the default client path
-- `@toon-ui/react` when you need explicit adapter ownership
+That is a GOOD thing.
 
-## Recommended package map
+It keeps server concerns, rendering concerns, and tooling concerns from bleeding into each other.
 
-| Layer | Package | Why |
+## Package map
+
+| Package | Responsibility | Best for |
 |---|---|---|
-| Server protocol | `@toon-ui/core` | Defines the language and interaction contracts |
-| Client convenience | `@toon-ui/toon-ui` | Gives you the fastest public entry point |
-| Client explicit integration | `@toon-ui/react` | Lets you own adapter coverage intentionally |
-| Prompt-only composition | `@toon-ui/prompts` | Useful when you only need prompt text helpers |
-| CLI tooling | `@toon-ui/cli` | Useful for validation and AST debugging |
+| `@toon-ui/core` | Protocol, catalog, parser, validation, prompts, events, messages | Server-side contract |
+| `@toon-ui/toon-ui` | Main client package with default adapter | Fastest integration path |
+| `@toon-ui/react` | Explicit React runtime and adapter APIs | Design-system ownership |
+| `@toon-ui/prompts` | Prompt helpers only | Custom prompt composition |
+| `@toon-ui/cli` | Validation and AST tooling | CI, fixtures, debugging |
 
-## Default composition
+## Default architecture
 
-This is the best starting point for most apps:
+Most teams should start here:
 
 ```txt
 server -> @toon-ui/core
 client -> @toon-ui/toon-ui
 ```
 
-## Explicit composition
+Why:
 
-Choose this when your frontend team owns a design system:
+- minimal setup
+- clean defaults
+- fast path to a real product integration
+
+## Explicit architecture
+
+Use this when the frontend team needs full rendering control:
 
 ```txt
 server -> @toon-ui/core
 client -> @toon-ui/react
-adapter -> your component layer
+adapter -> your components
 ```
 
-## Design principle
+Why:
 
-The packages are split by responsibility, not by marketing.
+- explicit adapter ownership
+- tighter design-system integration
+- stricter coverage guarantees
 
-That means:
+## How to choose
 
-- server concerns stay on the server
-- rendering concerns stay on the client
-- prompt helpers can be consumed independently
-- validation tooling can live in CI without leaking into runtime
+### Choose `@toon-ui/toon-ui` if you want speed
 
-## Read next
+Best when:
 
-1. [@toon-ui/toon-ui](/docs/packages/toon-ui)
-2. [@toon-ui/react](/docs/packages/react)
-3. [Protocol and Types](/docs/reference/protocol-and-types)
+- you want a working system quickly
+- the default adapter is acceptable
+- you may customize only a few components later
+
+### Choose `@toon-ui/react` if you want control
+
+Best when:
+
+- your team already owns a component system
+- rendering standards matter a lot
+- missing coverage should be explicit
+
+## Architecture principle
+
+The package split reflects the actual system design:
+
+- the server teaches the language
+- the client renders the language
+- the host app owns behavior
+- tooling validates the language
+
+That is the real architecture.
+
+## Next step
+
+1. [@toon-ui/core](/docs/packages/core)
+2. [@toon-ui/toon-ui](/docs/packages/toon-ui)
+3. [@toon-ui/react](/docs/packages/react)

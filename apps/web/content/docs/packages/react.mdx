@@ -1,30 +1,36 @@
 ---
 title: "@toon-ui/react"
-description: "Explicit React integration with adapters, render helpers, and the runtime API."
+description: "The explicit React integration layer for teams that want full ownership of rendering and adapters."
 ---
 
-`@toon-ui/react` is the explicit React integration layer.
+`@toon-ui/react` is the package for teams that want control, not just convenience.
 
-Use it when you want to own the adapter contract instead of relying on defaults.
+Use it when the UI layer matters enough that defaults are not enough.
+
+## Why use `@toon-ui/react`?
+
+Use it when you want:
+
+- explicit adapter ownership
+- custom component mapping
+- design-system integration
+- stricter rendering guarantees
 
 ## What it owns
 
 - React rendering runtime
 - adapter creation
 - adapter coverage metadata
-- default preset merging
-- render helpers for common controls
+- preset merging
+- helper props for custom controls
 
-## Main exports
+## Core APIs
 
 - `createToonReactAdapter()`
-- `createToonAdapter()`
-- `mergeToonComponentRegistry()`
 - `createToonReactRuntime()`
-- `assertToonReactAdapter()`
 - `ToonMessage`
 - `ToonRenderer`
-- `extractToonMarkdown`
+- `extractToonMarkdown()`
 - `getToonButtonProps()`
 - `getToonInputProps()`
 - `getToonTextareaProps()`
@@ -32,209 +38,7 @@ Use it when you want to own the adapter contract instead of relying on defaults.
 - `basicPreset()`
 - `useToonAction()`
 
-## Main exports explained
-
-### `createToonReactAdapter()`
-
-Creates the adapter contract that maps ToonUI semantic nodes to your React components.
-
-```tsx
-const adapter = createToonReactAdapter({
-  level: 'default',
-  components: {
-    button: MyButton,
-  },
-});
-```
-
-What it does:
-
-- combines your registry with the selected adapter mode
-- computes adapter coverage metadata
-- validates strict mode when needed
-
-Use it when:
-
-- you want explicit ownership of the React integration
-
-### `createToonAdapter()`
-
-This is just an alias of `createToonReactAdapter()`.
-
-Why it exists:
-
-- shorter API
-- cleaner naming in app code
-
-### `mergeToonComponentRegistry()`
-
-Merges multiple partial component registries into one registry.
-
-```tsx
-const registry = mergeToonComponentRegistry(defaults, overrides);
-```
-
-Use it when:
-
-- your component ownership is split across modules
-- you want preset + overrides composition
-
-### `createToonReactRuntime()`
-
-Creates the React runtime.
-
-```tsx
-const runtime = createToonReactRuntime({ adapter });
-```
-
-What it gives you:
-
-- protocol APIs from core
-- parse/validate/extract helpers
-- adapter metadata
-- layout configuration
-- rendering compatibility with `ToonMessage` and `ToonRenderer`
-
-### `assertToonReactAdapter()`
-
-Ensures the adapter is valid.
-
-Important verified behavior:
-
-- if `level === 'strict'` and coverage is incomplete, it throws
-
-Use it when:
-
-- you want to fail fast on incomplete adapter ownership
-
-### `ToonMessage`
-
-High-level component for messages containing prose plus ToonUI blocks.
-
-What it does:
-
-- renders markdown
-- renders ToonUI blocks
-- uses `extractToonMarkdown()` internally
-- delegates structured block rendering to `ToonRenderer`
-
-Use it for the default assistant-message use case.
-
-### `ToonRenderer`
-
-Lower-level renderer for the structured ToonUI content.
-
-What it does:
-
-- wraps rendering with `ToonProvider`
-- parses ToonUI blocks
-- validates the generated structure
-- renders the AST using registered components or fallbacks
-
-Use it when:
-
-- you want direct control over structured rendering
-- markdown rendering is handled elsewhere
-
-### `extractToonMarkdown()`
-
-Removes fenced `toon-ui` blocks and returns the remaining markdown text.
-
-Use it when:
-
-- prose and structured UI must be rendered separately
-
-### `getToonButtonProps()`
-
-Returns normalized button props:
-
-- `type`
-- `disabled`
-- `onClick`
-
-What it handles:
-
-- reply actions
-- submit actions
-- disabled-state protection
-
-Use it inside custom button components to keep ToonUI behavior correct.
-
-### `getToonInputProps()`
-
-Returns normalized props for input-like fields.
-
-What it handles:
-
-- field id/name
-- html input type mapping
-- required/disabled/placeholder
-- current value normalization
-- `onChange` wiring
-- numeric input conversion
-
-Use it when replacing default field rendering with your own input component.
-
-### `getToonTextareaProps()`
-
-Same idea as `getToonInputProps()`, but for textarea controls.
-
-Use it when your custom field component renders a `<textarea>`.
-
-### `getToonCheckboxProps()`
-
-Normalized checkbox wiring helper.
-
-Use it when:
-
-- your custom field renders a checkbox
-- you want ToonUI value handling to stay correct
-
-### `basicPreset()`
-
-Returns the built-in default registry used by the default adapter path.
-
-Important verified behavior:
-
-- it includes defaults for `text`, `badge`, `button`, `field`, `card`, `confirm`, `form`, `item`, `list`, `alert`, and `table`
-
-Use it when:
-
-- you want a reference implementation
-- you want to extend the built-in visual behavior
-
-### `useToonAction()`
-
-Hook that returns:
-
-- `events`
-- `messages`
-
-```tsx
-const { events, messages } = useToonAction();
-```
-
-Use it when a component needs the protocol interaction APIs without manually threading them down through props.
-
-## Practical decision rule
-
-Use:
-
-- `createToonReactAdapter()` to define component ownership
-- `createToonReactRuntime()` to build the runtime
-- `getToon*Props()` helpers to keep behavior correct in custom controls
-- `basicPreset()` when you want defaults as a base
-- `useToonAction()` when child components need protocol interaction helpers
-
-## Adapter levels
-
-| Level | Meaning |
-|---|---|
-| `minimal` | Only the components you register manually |
-| `default` | ToonUI defaults plus your overrides |
-| `strict` | Full coverage required or runtime throws |
-
-## Recommended adapter pattern
+## Recommended starting pattern
 
 ```tsx
 import {
@@ -258,33 +62,49 @@ const adapter = createToonReactAdapter({
 const runtime = createToonReactRuntime({ adapter });
 ```
 
-## Why the adapter exists
+## Adapter levels
 
-A raw component map is too weak as a public contract.
+| Level | Meaning |
+|---|---|
+| `minimal` | Only the components you register |
+| `default` | Built-in defaults plus your overrides |
+| `strict` | Full coverage required or the runtime throws |
 
-The adapter makes ownership explicit:
+## When `strict` matters
 
-- what you replace
-- what defaults remain
-- whether coverage is complete
-- which keys are still missing
+Use `strict` when your team wants hard guarantees that every semantic node is intentionally owned.
 
-```ts
-console.log(adapter.meta.level);
-console.log(adapter.meta.providedKeys);
-console.log(adapter.meta.missingKeys);
-```
+That is especially useful when:
 
-## When to choose this package
+- you have a mature design system
+- visual consistency matters a lot
+- fallback rendering is not acceptable
 
-Choose `@toon-ui/react` when:
+## Why the helper props matter
 
-- you already have a design system
-- you need strict rendering ownership
-- you want to audit component coverage
-- you want adapter behavior to be explicit in code review
+The `getToon*Props()` helpers preserve correct behavior for custom components.
 
-## Read next
+That means your custom button or field still gets:
 
-- [React Runtime and Hooks](/docs/reference/react-runtime-and-hooks)
-- [Events and Messages](/docs/reference/events-and-messages)
+- normalized values
+- click handling
+- submit wiring
+- disabled-state behavior
+
+Without those helpers, teams often rebuild behavior inconsistently.
+
+## Decision rule
+
+Choose `@toon-ui/react` if your priority is:
+
+- control first
+- explicit rendering ownership
+- long-term integration depth
+
+Choose `@toon-ui/toon-ui` if your priority is speed.
+
+## Next step
+
+1. [React Runtime and Hooks](/docs/reference/react-runtime-and-hooks)
+2. [@toon-ui/toon-ui](/docs/packages/toon-ui)
+3. [Package Architecture](/docs/architecture/package-architecture)

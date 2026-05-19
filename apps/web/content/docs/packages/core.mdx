@@ -1,11 +1,19 @@
 ---
 title: "@toon-ui/core"
-description: "Protocol foundation: catalog, parser, validation, prompts, and event/message conversion."
+description: "The protocol foundation of ToonUI: language, validation, prompts, and interaction conversion."
 ---
 
-`@toon-ui/core` is the protocol foundation of the whole ecosystem.
+`@toon-ui/core` is the package that defines the contract.
 
-Use it whenever you need the **language contract**, not the React rendering layer.
+Use it when you need the server-side language layer, not rendering.
+
+## Why use `@toon-ui/core`?
+
+Because every ToonUI integration starts with the same requirement:
+
+> the model needs a clear, teachable language for describing UI.
+
+`@toon-ui/core` gives you that language and the APIs around it.
 
 ## What it owns
 
@@ -14,35 +22,23 @@ Use it whenever you need the **language contract**, not the React rendering laye
 - validation
 - prompt generation
 - reply and submit event creation
-- message conversion back into your app/model loop
+- message conversion back into your app or model loop
 
-## Main exports
-
-- `createToonProtocol()`
-- `createToonCatalog()`
-- `TOON_CATALOG`
-- `parseToonUI()`
-- `validateToonUI()`
-- `extractToonBlocks()`
-- `createPrompt()`
-- `createComponentPrompt()`
-- `createSyntaxPrompt()`
-- `createFallbackPrompt()`
-- `createSafetyPrompt()`
-- `createExamplesPrompt()`
-- `createRules()`
-- `createToonCoreRuntime()`
-
-## Recommended server usage
+## Most common usage
 
 ```ts
 import { createToonProtocol } from '@toon-ui/core';
 
 const toon = createToonProtocol();
-const system = [toon.prompt, 'Available tools:', '- searchProducts(query)'].join('\n\n');
+
+const system = [
+  toon.prompt,
+  'Available tools:',
+  '- searchProducts(query)',
+].join('\n\n');
 ```
 
-## Public API shape
+## What `createToonProtocol()` gives you
 
 ```ts
 const toon = createToonProtocol();
@@ -55,27 +51,34 @@ toon.messages.toModelMessage(payload);
 toon.messages.toUIMessage(payload);
 ```
 
-## Why this package matters
+## Mental model
 
-This package keeps the protocol model EXPLICIT:
+Think about `@toon-ui/core` as three things:
 
-- `catalog` = language definition
-- `events` = interaction payload creation
-- `messages` = reinjection into the host loop
+- `catalog` = what the language supports
+- `events` = how user intent becomes structured payloads
+- `messages` = how that intent goes back into your app loop
 
-That separation is what makes ToonUI teachable and testable.
-
-## Boundary
+## What it does NOT do
 
 `@toon-ui/core` does NOT render React.
 
 If you need rendering, pair it with:
 
-- `@toon-ui/react` for explicit adapters
-- `@toon-ui/toon-ui` for the simplest public client path
+- `@toon-ui/toon-ui` for the fastest path
+- `@toon-ui/react` for explicit adapter ownership
 
-## Read next
+## Best fit
 
-- [Protocol and Types](/docs/reference/protocol-and-types)
-- [Events and Messages](/docs/reference/events-and-messages)
-- [Errors and Validation](/docs/reference/errors-and-validation)
+Use `@toon-ui/core` when you are building:
+
+- server prompts
+- model contracts
+- validation pipelines
+- tooling around the ToonUI language
+
+## Next step
+
+1. [Protocol and Types](/docs/reference/protocol-and-types)
+2. [Errors and Validation](/docs/reference/errors-and-validation)
+3. [Events and Messages](/docs/reference/events-and-messages)
