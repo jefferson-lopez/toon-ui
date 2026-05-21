@@ -10,6 +10,13 @@
     "dev:web": "pnpm --dir apps/web dev",
     "dev:playground": "pnpm --dir apps/playground dev",
     "lint": "turbo run lint",
+    "release:check": "pnpm build && pnpm typecheck && pnpm test",
+    "publish:core": "pnpm --filter @toon-ui/core publish --access public --no-git-checks",
+    "publish:react": "pnpm --filter @toon-ui/react publish --access public --no-git-checks",
+    "publish:prompts": "pnpm --filter @toon-ui/prompts publish --access public --no-git-checks",
+    "publish:toon-ui": "pnpm --filter @toon-ui/toon-ui publish --access public --no-git-checks",
+    "publish:cli": "pnpm --filter @toon-ui/cli publish --access public --no-git-checks",
+    "publish:all": "pnpm publish:core && pnpm publish:react && pnpm publish:prompts && pnpm publish:toon-ui && pnpm publish:cli",
     "test": "turbo run test",
     "typecheck": "turbo run typecheck"
   },
