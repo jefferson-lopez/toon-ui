@@ -1,7 +1,8 @@
 {
   "name": "@toon-ui/prompts",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Prompt helpers for teaching models to emit valid ToonUI.",
+  "license": "Apache-2.0",
   "keywords": [
     "toon-ui",
     "prompt",
@@ -39,6 +40,6 @@
     "lint": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@toon-ui/core": "workspace:2.0.0"
+    "@toon-ui/core": "workspace:2.0.1"
   }
 }

@@ -9,6 +9,31 @@ ToonUI lets an LLM answer with normal markdown plus compact `toon-ui` blocks whi
 3. Render assistant output with `ToonMessage` or `ToonRenderer`.
 4. Reinject interactions with `toon.messages.toUIMessage(payload)` or `toon.messages.toModelMessage(payload)`.
 
+## Install
+
+Install only the ToonUI packages you need:
+
+```bash
+pnpm add @toon-ui/core @toon-ui/toon-ui
+```
+
+If your app already uses React or Next.js, DO NOT duplicate framework installs in this command. Keep `react` and `react-dom` managed by the host app.
+
+Use only the protocol on the server:
+
+```bash
+pnpm add @toon-ui/core
+```
+
+## Positioning
+
+ToonUI is NOT tied to a single AI SDK.
+
+- Use ToonUI when you want the model to emit structured UI in a compact DSL.
+- Use `@toon-ui/core` to teach the model how to write ToonUI.
+- Use `@toon-ui/react` or `@toon-ui/toon-ui` to render that output in React.
+- Use Vercel AI SDK only if it fits your host app. It is the recommended starter path, not a required dependency.
+
 ## Package map
 
 | Package | Purpose |
@@ -28,6 +53,16 @@ const toon = createToonProtocol();
 console.log(toon.prompt);
 console.log(toon.catalog.components.form.syntax);
 ```
+
+`toon.prompt` is the base protocol prompt. It teaches the model:
+
+- which ToonUI components exist
+- how each component is written
+- which variants are valid
+- which syntax patterns are invalid
+- when UI is a better response than plain prose
+
+In other words: `toon.prompt` is the model-facing specification for writing ToonUI correctly.
 
 ## Client model
 
@@ -72,6 +107,29 @@ That means the preferred APIs are:
 - `toon.messages.toModelMessage(...)`
 - `toon.messages.toUIMessage(...)`
 
+## Integration choices
+
+Choose based on host ownership:
+
+| Situation | Recommended path |
+|---|---|
+| You want the fastest React starter | `@toon-ui/toon-ui` |
+| You want explicit design-system control in React | `@toon-ui/react` |
+| You need only the protocol, parser, validation, or prompt | `@toon-ui/core` |
+| You are using Next.js or React with Vercel AI SDK | ToonUI + Vercel AI SDK guide |
+| You have your own chat loop or another SDK | Keep ToonUI and wire your own host loop |
+
+## Host architecture
+
+Think in layers:
+
+- `toon.prompt` -> teaches the LLM how to write ToonUI
+- host system prompt -> teaches the LLM your business role
+- host tools -> define what the assistant can actually do
+- React runtime -> renders `toon-ui` blocks and sends interactions back
+
+That means ToonUI owns the UI protocol, while the host app owns orchestration.
+
 ## Adapter model
 
 Adapters are now explicit contracts, not just loose component maps. Each adapter exposes coverage metadata and supports `minimal`, `default`, and `strict` levels so the host can verify or enforce integration completeness.
@@ -96,3 +154,7 @@ const adapter = createToonReactAdapter({
 const runtime = createToonReactRuntime({ adapter });
 ```
 
+## Next steps
+
+- Want the recommended React/Next.js path? See `docs/guides/with-vercel-ai-sdk.md`
+- Want the architecture boundary? See `docs/architecture/05-interaction-protocol.md`

@@ -1,6 +1,16 @@
 # Using ToonUI with Vercel AI SDK
 
-This is the recommended host-first integration.
+This is the recommended starter integration for React and Next.js apps.
+
+It is NOT the only valid integration.
+
+Use this guide when:
+
+- your host app already uses React or Next.js
+- you want a fast path with `useChat`
+- you want a practical reference integration
+
+Do NOT read this as “ToonUI requires Vercel AI SDK”. It does not.
 
 ## Quick path
 
@@ -9,6 +19,16 @@ This is the recommended host-first integration.
 3. Host renders markdown with its own renderer.
 4. ToonUI renders only `toon-ui` blocks.
 5. Reinject interactions with `toon.messages.toUIMessage(payload)`.
+
+## What each layer owns
+
+| Layer | Responsibility |
+|---|---|
+| ToonUI | prompt protocol, parser, validation, UI runtime |
+| Vercel AI SDK | chat state, transport helpers, model loop ergonomics |
+| Your app | tools, persistence, business logic, authorization |
+
+This separation matters. ToonUI teaches the model how to write UI, but your host app still decides what the assistant can do.
 
 ## Server
 
@@ -67,6 +87,16 @@ export function AssistantChat() {
 - `toon.messages.toUIMessage(payload)` for `useChat`
 - `toon.messages.toModelMessage(payload)` for custom host state
 - `toon.events.*` if you need to manufacture events manually
+
+## When to choose something else
+
+Do NOT force Vercel AI SDK if:
+
+- you already have a custom chat transport
+- you use another SDK or direct API calls
+- you want framework-agnostic orchestration
+
+In those cases, keep ToonUI and replace only the host chat loop.
 
 ## Avoid
 

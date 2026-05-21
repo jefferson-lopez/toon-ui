@@ -1,7 +1,8 @@
 {
   "name": "@toon-ui/toon-ui",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Main public entrypoint for ToonUI, a semantic UI runtime for AI-native apps.",
+  "license": "Apache-2.0",
   "keywords": [
     "toon-ui",
     "ai",
@@ -10,7 +11,7 @@
     "ui",
     "conversational-ui"
   ],
-  "homepage": "https://github.com/jefferson-lopez/toon-ui#readme",
+  "homepage": "https://toon-ui.dev",
   "bugs": {
     "url": "https://github.com/jefferson-lopez/toon-ui/issues"
   },
@@ -44,8 +45,8 @@
     "lint": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@toon-ui/core": "workspace:2.0.0",
-    "@toon-ui/react": "workspace:2.0.0"
+    "@toon-ui/core": "workspace:2.0.1",
+    "@toon-ui/react": "workspace:2.0.1"
   },
   "peerDependencies": {
     "react": "^19.2.6"

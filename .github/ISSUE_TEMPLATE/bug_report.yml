@@ -1,0 +1,39 @@
+name: Bug report
+description: Report a reproducible bug in ToonUI
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What happened?
+      description: Describe the bug clearly.
+      placeholder: What did you do, what did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: Share the smallest reproducible example.
+      placeholder: Steps, code snippet, or repo link
+    validations:
+      required: true
+  - type: textarea
+    id: packages
+    attributes:
+      label: Affected package(s)
+      placeholder: "@toon-ui/core, @toon-ui/react, @toon-ui/toon-ui"
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      placeholder: OS, Node version, package manager, framework
+  - type: textarea
+    id: notes
+    attributes:
+      label: Additional context
+      placeholder: Logs, screenshots, tradeoffs, or related issues

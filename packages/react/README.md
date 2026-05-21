@@ -12,6 +12,16 @@ Use it when you want to own the UI adapter instead of relying on the default cli
 4. Render with `ToonMessage` or `ToonRenderer`.
 5. Reinject interactions with `runtime.messages.*`.
 
+## Install
+
+In a React host app:
+
+```bash
+pnpm add @toon-ui/core @toon-ui/react
+```
+
+Do NOT force `react` or `react-dom` in this command. Those belong to the host framework and should already be managed by the app.
+
 ## Main exports
 
 - `createToonReactAdapter()`
@@ -100,4 +110,3 @@ const next = runtime.messages.toUIMessage(payload);
 ```ts
 const { events, messages } = useToonAction();
 ```
-

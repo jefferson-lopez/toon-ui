@@ -10,6 +10,14 @@ Use it when you need the server model, the central catalog, parsing, validation,
 2. Feed `toon.prompt` into your system prompt.
 3. Use `toon.catalog`, `toon.events`, and `toon.messages` as the public API.
 
+## Install
+
+Use only the protocol package when you do not need React rendering:
+
+```bash
+pnpm add @toon-ui/core
+```
+
 ## Main exports
 
 - `createToonProtocol()`
@@ -62,4 +70,3 @@ If you need rendering:
 
 - `@toon-ui/react` for explicit adapters
 - `@toon-ui/toon-ui` for the simplest client path
-

@@ -8,6 +8,17 @@ ToonUI is a UI runtime, not a tool-orchestration layer.
 - The host app decides how to combine ToonUI prompt instructions with model/system prompts.
 - The host app decides which AI SDK tools exist and when the model can call them.
 
+## Mental model
+
+Separate these concerns ON PURPOSE:
+
+- `toon.prompt` teaches the model how to write valid ToonUI
+- the host system prompt teaches the model the product role
+- host tools define which business actions are available
+- the UI runtime renders blocks and converts user interactions back into chat messages
+
+This means ToonUI is SDK-agnostic at the orchestration layer. Vercel AI SDK is a good host choice, not a protocol requirement.
+
 ## Reply payload
 
 ```ts

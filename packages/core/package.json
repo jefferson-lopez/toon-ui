@@ -1,7 +1,8 @@
 {
   "name": "@toon-ui/core",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Core parser, AST, validation, and protocol utilities for ToonUI.",
+  "license": "Apache-2.0",
   "keywords": [
     "toon-ui",
     "ai",
