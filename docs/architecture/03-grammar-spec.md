@@ -31,6 +31,13 @@ columns         -> columns: value, value, value
 row             -> row: value, value, value
 ```
 
+## Optional grammar notation vs literal syntax
+
+- Brackets in this document indicate optional grammar parts. They are NOT literal ToonUI characters.
+- Example notation: `item "title" [description="..."]:` means the `description` attribute is optional.
+- Literal valid syntax without description: `item "Juan Pérez":`
+- Literal valid syntax with description: `item "Juan Pérez" description="juan@example.com":`
+
 ## Nesting constraints
 
 - `list` can only contain `item`

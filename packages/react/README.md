@@ -32,6 +32,7 @@ Do NOT force `react` or `react-dom` in this command. Those belong to the host fr
 - `ToonMessage`
 - `ToonRenderer`
 - `extractToonMarkdown`
+- `ToonErrorRenderer`
 - `getToonButtonProps()`
 - `getToonInputProps()`
 - `getToonTextareaProps()`

@@ -1,5 +1,5 @@
 import { parseToonUI } from './parser';
-import type { ToonBlock } from './types';
+import type { ToonBlock, ToonContentSegment } from './types';
 
 const BLOCK_REGEX = /```toon-ui[^\n\r]*\r?\n([\s\S]*?)```/g;
 const OPEN_BLOCK_REGEX = /```toon-ui[^\n\r]*\r?\n?/g;
@@ -61,4 +61,46 @@ export function extractToonBlocks(content: string): ToonBlock[] {
   }
 
   return [...blocks, createBlock(partialRaw, openFenceIndex, content.length, false)];
+}
+
+export function extractToonSegments(content: string): ToonContentSegment[] {
+  const blocks = extractToonBlocks(content);
+
+  if (blocks.length === 0) {
+    return content
+      ? [{ type: 'markdown', content, start: 0, end: content.length }]
+      : [];
+  }
+
+  const segments: ToonContentSegment[] = [];
+  let cursor = 0;
+
+  for (const block of blocks) {
+    if (block.start > cursor) {
+      segments.push({
+        type: 'markdown',
+        content: content.slice(cursor, block.start),
+        start: cursor,
+        end: block.start,
+      });
+    }
+
+    segments.push({
+      ...block,
+      type: 'toon-ui',
+    });
+
+    cursor = block.end;
+  }
+
+  if (cursor < content.length) {
+    segments.push({
+      type: 'markdown',
+      content: content.slice(cursor),
+      start: cursor,
+      end: content.length,
+    });
+  }
+
+  return segments;
 }

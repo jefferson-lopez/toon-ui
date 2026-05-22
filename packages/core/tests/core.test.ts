@@ -3,9 +3,18 @@ import {
   TOON_CATALOG,
   ToonSyntaxError,
   createToonCatalog,
+  createCatalogCoveragePrompt,
+  createCatalogOverviewPrompt,
+  createSyntaxPrompt,
+  createFallbackPrompt,
+  createSelfCheckPrompt,
+  createDecisionPrompt,
+  createExamplesPrompt,
+  createCompositionPrompt,
   createToonCoreRuntime,
   createToonProtocol,
   extractToonBlocks,
+  extractToonSegments,
   parseToonUI,
   validateToonUI,
 } from '../src';
@@ -34,6 +43,46 @@ describe('toon core', () => {
     });
   });
 
+  it('extracts ordered markdown and toon-ui segments without losing the original sequence', () => {
+    const content = [
+      'Claro, aquí tienes algunos ejemplos:',
+      '',
+      '```toon-ui',
+      'card "Demo":',
+      '  text "Uno"',
+      '```',
+      '',
+      'Si necesitas algo más, dímelo.',
+    ].join('\n');
+
+    const intro = 'Claro, aquí tienes algunos ejemplos:\n\n';
+    const blockSource = ['```toon-ui', 'card "Demo":', '  text "Uno"', '```'].join('\n');
+    const outro = '\n\nSi necesitas algo más, dímelo.';
+
+    expect(extractToonSegments(content)).toEqual([
+      {
+        type: 'markdown',
+        content: intro,
+        start: 0,
+        end: intro.length,
+      },
+      {
+        type: 'toon-ui',
+        raw: ['card "Demo":', '  text "Uno"'].join('\n'),
+        language: 'toon-ui',
+        start: intro.length,
+        end: intro.length + blockSource.length,
+        complete: true,
+      },
+      {
+        type: 'markdown',
+        content: outro,
+        start: intro.length + blockSource.length,
+        end: content.length,
+      },
+    ]);
+  });
+
   it('parses and validates a simple form', () => {
     const document = parseToonUI([
       'form "Crear producto":',
@@ -45,6 +94,63 @@ describe('toon core', () => {
     expect(result.ok).toBe(true);
     expect(document.body[0]).toMatchObject({ type: 'form', line: 1, column: 1 });
     expect((document.body[0] as { children: Array<{ placeholder?: string }> }).children[0]?.placeholder).toBe('Ej: Coca-Cola');
+  });
+
+  it('parses optional descriptions on supported containers', () => {
+    const document = parseToonUI([
+      'card "Cliente" description="Cuenta premium":',
+      '  text "Activo"',
+      'form "Registrar usuario" description="Completa los campos obligatorios":',
+      '  field nombre text "Nombre" required',
+      '  button primary "Guardar" submit',
+      'confirm warning "Eliminar usuario" description="Esta acción no se puede deshacer":',
+      '  text "Confirma para continuar"',
+      'item "Pedido #123" description="Pendiente de pago":',
+      '  text "Total: $20"',
+      'empty "Sin resultados" description="Prueba con otro filtro":',
+      '  text "No encontramos coincidencias"',
+    ].join('\n'));
+
+    expect(document.body[0]).toMatchObject({ type: 'card', description: 'Cuenta premium' });
+    expect(document.body[1]).toMatchObject({ type: 'form', description: 'Completa los campos obligatorios' });
+    expect(document.body[2]).toMatchObject({ type: 'confirm', description: 'Esta acción no se puede deshacer' });
+    expect(document.body[3]).toMatchObject({ type: 'item', description: 'Pendiente de pago' });
+    expect(document.body[4]).toMatchObject({ type: 'empty', description: 'Prueba con otro filtro' });
+  });
+
+  it('makes the prompt explicit about optional description notation', () => {
+    const syntaxPrompt = createSyntaxPrompt();
+    const fallbackPrompt = createFallbackPrompt();
+    const selfCheckPrompt = createSelfCheckPrompt();
+
+    expect(syntaxPrompt).toContain('NEVER output literal [] characters in ToonUI');
+    expect(syntaxPrompt).toContain('item "Juan Pérez" description="juan@example.com":');
+    expect(syntaxPrompt).toContain('list only accepts item children');
+    expect(fallbackPrompt).toContain('NEVER write [description="..."] literally.');
+    expect(selfCheckPrompt).toContain('NEVER emit square brackets such as [description="..."] in final ToonUI output');
+    expect(selfCheckPrompt).toContain('If the request asks for all or exhaustive coverage');
+  });
+
+  it('pushes the model toward complete and less repetitive coverage', () => {
+    const catalogOverviewPrompt = createCatalogOverviewPrompt();
+    const catalogCoveragePrompt = createCatalogCoveragePrompt();
+    const compositionPrompt = createCompositionPrompt();
+    const decisionPrompt = createDecisionPrompt();
+    const examplesPrompt = createExamplesPrompt();
+
+    expect(catalogOverviewPrompt).toContain('Catalog overview by component group:');
+    expect(catalogOverviewPrompt).toContain('navigation:');
+    expect(catalogOverviewPrompt).toContain('command: Command palette style action list.');
+    expect(catalogCoveragePrompt).toContain('Official component coverage checklist:');
+    expect(catalogCoveragePrompt).toContain('content: text, heading, separator, badge');
+    expect(catalogCoveragePrompt).toContain('overlay: dialog, sheet, popover, tooltip');
+    expect(compositionPrompt).toContain('cover less-common official components too instead of repeating only form, confirm, table, and alert');
+    expect(decisionPrompt).toContain('enumerate each official component explicitly before claiming coverage');
+    expect(decisionPrompt).toContain('Do NOT claim a response is complete or exhaustive unless every official component has been explicitly covered');
+    expect(examplesPrompt).toContain('Catalog-derived valid examples:');
+    expect(examplesPrompt).toContain('list "Registered customers":');
+    expect(examplesPrompt).toContain('sheet "Customer activity" side="right":');
+    expect(examplesPrompt).toContain('command "Quick actions":');
   });
 
   it('rejects meta because the official catalog is closed', () => {
@@ -88,6 +194,18 @@ describe('toon core', () => {
     const result = validateToonUI(document);
     expect(result.errors.some((issue) => issue.code === 'INVALID_NESTING')).toBe(true);
     expect(result.errors.some((issue) => issue.code === 'INVALID_PROP')).toBe(true);
+  });
+
+  it('detects invalid field types when field name and type are malformed', () => {
+    const document = parseToonUI([
+      'form "Ingresar Precio":',
+      '  field numberProducto "Producto Price"',
+      '  button primary "Guardar Precio" submit',
+    ].join('\n'));
+
+    const result = validateToonUI(document);
+    expect(result.ok).toBe(false);
+    expect(result.errors.some((issue) => issue.code === 'INVALID_PROP' && issue.message.includes('Invalid field type'))).toBe(true);
   });
 
   it('parses quoted table cells with commas without breaking the row shape', () => {

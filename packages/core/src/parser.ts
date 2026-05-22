@@ -234,7 +234,7 @@ function parseLine(content: string, line: number, column: number): ToonNode {
   if (content.startsWith('card ')) {
     const [title] = getQuotedValues(content);
     if (!title || !content.endsWith(':')) syntaxIssue('INVALID_SYNTAX', `Line ${line}: card requires a title and nested block.`, line, column);
-    return { type: 'card', title, children: [], line, column } satisfies CardNode;
+    return { type: 'card', title, description: getStringAttribute(content, 'description'), children: [], line, column } satisfies CardNode;
   }
 
   if (content.startsWith('confirm ')) {
@@ -244,6 +244,7 @@ function parseLine(content: string, line: number, column: number): ToonNode {
       type: 'confirm',
       variant: (getVariantBeforeQuotedValue(content, 'confirm') ?? 'neutral') as ConfirmNode['variant'],
       title,
+      description: getStringAttribute(content, 'description'),
       children: [],
       line,
       column,
@@ -253,7 +254,7 @@ function parseLine(content: string, line: number, column: number): ToonNode {
   if (content.startsWith('form ')) {
     const [title] = getQuotedValues(content);
     if (!title || !content.endsWith(':')) syntaxIssue('INVALID_SYNTAX', `Line ${line}: form requires a title and nested block.`, line, column);
-    return { type: 'form', title, children: [], line, column } satisfies FormNode;
+    return { type: 'form', title, description: getStringAttribute(content, 'description'), children: [], line, column } satisfies FormNode;
   }
 
   if (content.startsWith('list ')) {
@@ -265,7 +266,7 @@ function parseLine(content: string, line: number, column: number): ToonNode {
   if (content.startsWith('item ')) {
     const [title] = getQuotedValues(content);
     if (!title || !content.endsWith(':')) syntaxIssue('INVALID_SYNTAX', `Line ${line}: item requires a title and nested block.`, line, column);
-    return { type: 'item', title, children: [], line, column } satisfies ItemNode;
+    return { type: 'item', title, description: getStringAttribute(content, 'description'), children: [], line, column } satisfies ItemNode;
   }
 
   if (content.startsWith('alert ')) {
@@ -284,7 +285,7 @@ function parseLine(content: string, line: number, column: number): ToonNode {
   if (content.startsWith('empty ')) {
     const [title] = getQuotedValues(content);
     if (!title || !content.endsWith(':')) syntaxIssue('INVALID_SYNTAX', `Line ${line}: empty requires a title and nested block.`, line, column);
-    return { type: 'empty', title, children: [], line, column } satisfies EmptyNode;
+    return { type: 'empty', title, description: getStringAttribute(content, 'description'), children: [], line, column } satisfies EmptyNode;
   }
 
   if (content.startsWith('tabs ')) {

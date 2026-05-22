@@ -96,6 +96,7 @@ export interface FieldNode extends BaseNode {
 export interface CardNode extends BaseNode {
   type: 'card';
   title: string;
+  description?: string;
   children: ToonNode[];
 }
 
@@ -103,12 +104,14 @@ export interface ConfirmNode extends BaseNode {
   type: 'confirm';
   variant: ConfirmVariant;
   title: string;
+  description?: string;
   children: ToonNode[];
 }
 
 export interface ItemNode extends BaseNode {
   type: 'item';
   title: string;
+  description?: string;
   children: ToonNode[];
 }
 
@@ -135,12 +138,14 @@ export interface TableNode extends BaseNode {
 export interface FormNode extends BaseNode {
   type: 'form';
   title: string;
+  description?: string;
   children: ToonNode[];
 }
 
 export interface EmptyNode extends BaseNode {
   type: 'empty';
   title: string;
+  description?: string;
   children: ToonNode[];
 }
 
@@ -318,6 +323,19 @@ export interface ToonBlock {
   end: number;
   complete: boolean;
 }
+
+export interface ToonMarkdownSegment {
+  type: 'markdown';
+  content: string;
+  start: number;
+  end: number;
+}
+
+export interface ToonUIBlockSegment extends ToonBlock {
+  type: 'toon-ui';
+}
+
+export type ToonContentSegment = ToonMarkdownSegment | ToonUIBlockSegment;
 
 export interface ValidationIssue {
   code: ToonErrorCode;

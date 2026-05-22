@@ -1,6 +1,6 @@
 {
   "name": "@toon-ui/toon-ui",
-  "version": "2.0.1",
+  "version": "2.0.5",
   "description": "Main public entrypoint for ToonUI, a semantic UI runtime for AI-native apps.",
   "license": "Apache-2.0",
   "keywords": [
@@ -45,8 +45,8 @@
     "lint": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@toon-ui/core": "workspace:2.0.1",
-    "@toon-ui/react": "workspace:2.0.1"
+    "@toon-ui/core": "workspace:2.0.5",
+    "@toon-ui/react": "workspace:2.0.5"
   },
   "peerDependencies": {
     "react": "^19.2.6"

@@ -6,6 +6,7 @@ import type {
   ButtonNode,
   CardNode,
   ConfirmNode,
+  EmptyNode,
   FieldNode,
   FormNode,
   ItemNode,
@@ -14,6 +15,7 @@ import type {
   SubmitPayload,
   TableNode,
   TextNode,
+  ToonBlock,
   ToonNode,
   ToonNodeByType,
   ToonRuntime,
@@ -54,6 +56,7 @@ export type ToonItemComponentProps = BaseProps<ItemNode>;
 export type ToonBadgeComponentProps = BaseProps<BadgeNode>;
 export type ToonAlertComponentProps = BaseProps<AlertNode>;
 export type ToonTableComponentProps = BaseProps<TableNode>;
+export type ToonEmptyComponentProps = BaseProps<EmptyNode>;
 export type ToonButtonComponentProps = BaseProps<ButtonNode> & {
   sendReply: (reply?: string) => void;
   submitForm: () => void;
@@ -82,6 +85,7 @@ export interface ToonReactComponentPropsByType {
   badge: ToonBadgeComponentProps;
   alert: ToonAlertComponentProps;
   table: ToonTableComponentProps;
+  empty: ToonEmptyComponentProps;
 }
 
 export const TOON_REACT_ADAPTER_KEYS = [
@@ -96,6 +100,7 @@ export const TOON_REACT_ADAPTER_KEYS = [
   'badge',
   'alert',
   'table',
+  'empty',
 ] as const;
 
 export type ToonReactAdapterComponentKey = (typeof TOON_REACT_ADAPTER_KEYS)[number];
@@ -118,6 +123,16 @@ export interface ToonReactAdapter {
   components: ToonReactComponentRegistry;
   meta: ToonReactAdapterMeta;
 }
+
+export interface ToonRenderErrorState {
+  kind: 'parse' | 'validation';
+  block: ToonBlock;
+  message: string;
+  details: string[];
+  cause?: unknown;
+}
+
+export type ToonErrorRenderer = (error: ToonRenderErrorState) => React.ReactNode;
 
 export interface CreateToonReactAdapterOptions {
   components?: ToonReactComponentRegistry;
@@ -240,7 +255,65 @@ export function createToonReactRuntime(
 }
 
 export function extractToonMarkdown(content: string): string {
-  return content.replace(/```toon-ui[\s\S]*?(?:```|$)/g, '').trim();
+  return extractToonSegments(content)
+    .filter((segment) => segment.type === 'markdown')
+    .map((segment) => segment.content)
+    .join('')
+    .trim();
+}
+
+function renderNodeDescription(description?: string): React.ReactNode {
+  return description ? <p style={{ margin: 0, color: '#4b5563' }}>{description}</p> : null;
+}
+
+function getNodeDescription(node: ToonNode): string | undefined {
+  return 'description' in node && typeof node.description === 'string' ? node.description : undefined;
+}
+
+type ToonMessageSegment =
+  | { type: 'markdown'; content: string; start: number; end: number }
+  | ({ type: 'toon-ui' } & ToonBlock);
+
+function extractToonSegments(content: string): ToonMessageSegment[] {
+  const blocks = createToonCoreRuntime().extractBlocks(content);
+
+  if (blocks.length === 0) {
+    return content
+      ? [{ type: 'markdown', content, start: 0, end: content.length }]
+      : [];
+  }
+
+  const segments: ToonMessageSegment[] = [];
+  let cursor = 0;
+
+  for (const block of blocks) {
+    if (block.start > cursor) {
+      segments.push({
+        type: 'markdown',
+        content: content.slice(cursor, block.start),
+        start: cursor,
+        end: block.start,
+      });
+    }
+
+    segments.push({
+      ...block,
+      type: 'toon-ui',
+    });
+
+    cursor = block.end;
+  }
+
+  if (cursor < content.length) {
+    segments.push({
+      type: 'markdown',
+      content: content.slice(cursor),
+      start: cursor,
+      end: content.length,
+    });
+  }
+
+  return segments;
 }
 
 const ToonRuntimeContext = createContext<ToonReactRuntime | null>(null);
@@ -563,7 +636,7 @@ function renderFallback(node: ToonNode, children: React.ReactNode, form: FormNod
     case 'dialog':
     case 'sheet':
     case 'popover':
-      return <section key={key} style={surfaceStyle}><strong>{node.title}</strong><div style={nestedBlockStyle}>{children}</div></section>;
+      return <section key={key} style={surfaceStyle}><strong>{node.title}</strong>{renderNodeDescription(getNodeDescription(node))}<div style={nestedBlockStyle}>{children}</div></section>;
     case 'list':
     case 'tabs':
     case 'accordion':
@@ -721,6 +794,10 @@ function RegisteredNode({ node, form, nodeKey, blockId }: { node: ToonNode; form
       const Component = runtime.components.alert;
       return Component ? <Component node={node} context={context} disabled={blockResolved}>{children}</Component> : renderFallback(node, children, activeForm, context, nodeKey, blockResolved);
     }
+    case 'empty': {
+      const Component = runtime.components.empty;
+      return Component ? <Component node={node} context={context} disabled={blockResolved}>{children}</Component> : renderFallback(node, children, activeForm, context, nodeKey, blockResolved);
+    }
     case 'table': {
       const Component = runtime.components.table;
       return Component ? <Component node={node} context={context} disabled={blockResolved} /> : renderFallback(node, children, activeForm, context, nodeKey, blockResolved);
@@ -730,32 +807,73 @@ function RegisteredNode({ node, form, nodeKey, blockId }: { node: ToonNode; form
   }
 }
 
-function ToonRendererInner({ content }: { content: string }) {
+function ToonRenderedBlock({
+  block,
+  index,
+  renderError,
+  showErrorDetails = false,
+}: {
+  block: ReturnType<ToonReactRuntime['extractBlocks']>[number];
+  index: number;
+  renderError?: ToonErrorRenderer;
+  showErrorDetails?: boolean;
+}) {
+  const runtime = useToonUI();
+
+  try {
+    const ast = runtime.parse(block.raw);
+    const result = runtime.validate(ast);
+    if (block.complete && !result.ok) {
+      const errorState: ToonRenderErrorState = {
+        kind: 'validation',
+        block,
+        message: 'This interface could not be displayed.',
+        details: result.errors.map((error) => error.message),
+      };
+
+      return renderError
+        ? <>{renderError(errorState)}</>
+        : <ToonError message={errorState.message} details={showErrorDetails ? errorState.details : []} />;
+    }
+
+    return (
+      <div data-toon-ui-block style={createStackStyle(runtime.layout.blockGap)}>
+        {ast.body.map((node, nodeIndex) => (
+          <RegisteredNode key={`${index}-${nodeIndex}`} node={node} nodeKey={`${index}-${nodeIndex}`} blockId={`block-${index}`} />
+        ))}
+      </div>
+    );
+  } catch (error) {
+    const errorState: ToonRenderErrorState = {
+      kind: 'parse',
+      block,
+      message: 'This interface could not be displayed.',
+      details: [error instanceof Error ? error.message : 'Unknown ToonUI error'],
+      cause: error,
+    };
+
+    return renderError
+      ? <>{renderError(errorState)}</>
+      : <ToonError message={errorState.message} details={showErrorDetails ? errorState.details : []} />;
+  }
+}
+
+function ToonRendererInner({
+  content,
+  renderError,
+  showErrorDetails,
+}: {
+  content: string;
+  renderError?: ToonErrorRenderer;
+  showErrorDetails?: boolean;
+}) {
   const runtime = useToonUI();
   const blocks = runtime.extractBlocks(content);
   if (blocks.length === 0) return null;
 
   return (
     <div data-toon-ui-renderer style={createStackStyle(runtime.layout.blockGap)}>
-      {blocks.map((block, index) => {
-        try {
-          const ast = runtime.parse(block.raw);
-          const result = runtime.validate(ast);
-          if (block.complete && !result.ok) {
-            return <ToonError key={index} message="La interfaz generada no es válida." details={result.errors.map((error) => error.message)} />;
-          }
-
-          return (
-            <div key={index} data-toon-ui-block style={createStackStyle(runtime.layout.blockGap)}>
-              {ast.body.map((node, nodeIndex) => (
-                <RegisteredNode key={`${index}-${nodeIndex}`} node={node} nodeKey={`${index}-${nodeIndex}`} blockId={`block-${index}`} />
-              ))}
-            </div>
-          );
-        } catch (error) {
-          return <ToonError key={index} message="La interfaz generada no es válida." details={[error instanceof Error ? error.message : 'Unknown ToonUI error']} />;
-        }
-      })}
+      {blocks.map((block, index) => <ToonRenderedBlock key={index} block={block} index={index} renderError={renderError} showErrorDetails={showErrorDetails} />)}
     </div>
   );
 }
@@ -766,16 +884,20 @@ export function ToonRenderer({
   onReply,
   onSubmit,
   interactive = true,
+  renderError,
+  showErrorDetails = false,
 }: {
   content: string;
   runtime: ToonReactRuntime;
   onReply?: (payload: ToonReplyPayload) => void;
   onSubmit?: (payload: ToonSubmitPayload) => void;
   interactive?: boolean;
+  renderError?: ToonErrorRenderer;
+  showErrorDetails?: boolean;
 }) {
   return (
     <ToonProvider runtime={runtime} onReply={onReply} onSubmit={onSubmit} interactive={interactive}>
-      <ToonRendererInner content={content} />
+      <ToonRendererInner content={content} renderError={renderError} showErrorDetails={showErrorDetails} />
     </ToonProvider>
   );
 }
@@ -787,6 +909,8 @@ export function ToonMessage({
   onSubmit,
   renderMarkdown = (markdown) => <ReactMarkdown>{markdown}</ReactMarkdown>,
   interactive = true,
+  renderError,
+  showErrorDetails = false,
 }: {
   content: string;
   runtime: ToonReactRuntime;
@@ -794,18 +918,27 @@ export function ToonMessage({
   onSubmit?: (payload: ToonSubmitPayload) => void;
   renderMarkdown?: ToonMarkdownRenderer;
   interactive?: boolean;
+  renderError?: ToonErrorRenderer;
+  showErrorDetails?: boolean;
 }) {
-  const blocks = runtime.extractBlocks(content);
-  const markdown = extractToonMarkdown(content);
+  const segments = extractToonSegments(content);
 
   return (
     <div data-toon-ui-message style={createStackStyle(runtime.layout.messageGap)}>
-      {markdown ? (
-        <div data-toon-markdown>
-          {renderMarkdown(markdown)}
-        </div>
-      ) : null}
-      {blocks.length > 0 ? <ToonRenderer content={content} runtime={runtime} onReply={onReply} onSubmit={onSubmit} interactive={interactive} /> : null}
+      <ToonProvider runtime={runtime} onReply={onReply} onSubmit={onSubmit} interactive={interactive}>
+        {segments.map((segment, index) => {
+          if (segment.type === 'markdown') {
+            const markdown = segment.content.trim();
+            return markdown ? (
+              <div key={`${segment.type}-${segment.start}-${index}`} data-toon-markdown>
+                {renderMarkdown(markdown)}
+              </div>
+            ) : null;
+          }
+
+          return <ToonRenderedBlock key={`${segment.type}-${segment.start}-${index}`} block={segment} index={index} renderError={renderError} showErrorDetails={showErrorDetails} />;
+        })}
+      </ToonProvider>
     </div>
   );
 }
@@ -887,24 +1020,28 @@ export function basicPreset(): ToonReactComponentRegistry {
     card: ({ node, children }: ToonCardComponentProps) => (
       <section style={createPresetSurface()}>
         <strong>{node.title}</strong>
+        {renderNodeDescription(node.description)}
         {children}
       </section>
     ),
     confirm: ({ node, children }: ToonConfirmComponentProps) => (
       <section style={createPresetSurface(node.variant)}>
         <strong>{node.title}</strong>
+        {renderNodeDescription(node.description)}
         {children}
       </section>
     ),
     form: ({ node, children }: ToonFormComponentProps) => (
       <section style={createPresetSurface()}>
         <strong>{node.title}</strong>
+        {renderNodeDescription(node.description)}
         {children}
       </section>
     ),
     item: ({ node, children }: ToonItemComponentProps) => (
       <section style={createPresetSurface()}>
         <strong>{node.title}</strong>
+        {renderNodeDescription(node.description)}
         {children}
       </section>
     ),
@@ -917,6 +1054,13 @@ export function basicPreset(): ToonReactComponentRegistry {
     alert: ({ node, children }: ToonAlertComponentProps) => (
       <section style={createPresetSurface(node.variant)}>
         <strong>{node.title}</strong>
+        {children}
+      </section>
+    ),
+    empty: ({ node, children }: ToonEmptyComponentProps) => (
+      <section style={createPresetSurface()}>
+        <strong>{node.title}</strong>
+        {renderNodeDescription(node.description)}
         {children}
       </section>
     ),

@@ -204,7 +204,7 @@ Use `ToonRenderer` when you want to render ONLY the ToonUI blocks and handle mar
 `ToonMessage` does two jobs:
 
 1. strips ToonUI blocks from the markdown view
-2. renders the ToonUI blocks below the markdown
+2. renders markdown and ToonUI blocks in the SAME order they appeared in the original assistant message
 
 That makes it the best default for chat apps.
 
@@ -214,6 +214,7 @@ That makes it the best default for chat apps.
   runtime={toon}
   onReply={handleReply}
   onSubmit={handleSubmit}
+  renderError={({ message }) => <MyAlert tone="danger">{message}</MyAlert>}
 />
 ```
 
@@ -231,8 +232,14 @@ Use `ToonRenderer` when:
   runtime={toon}
   onReply={handleReply}
   onSubmit={handleSubmit}
+  showErrorDetails={false}
 />
 ```
+
+Both renderers also support:
+
+- `renderError(error)` for host-controlled fallback UI when a ToonUI block fails
+- `showErrorDetails` for optional parser/validator details in debug scenarios
 
 ## Extracting markdown only
 

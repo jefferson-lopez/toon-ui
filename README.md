@@ -76,6 +76,7 @@ function AssistantMessage({ content }: { content: string }) {
     <ToonMessage
       content={content}
       runtime={toon}
+      renderError={({ message }) => <MyAlert tone="danger">{message}</MyAlert>}
       onReply={(payload) => {
         const message = toon.messages.toUIMessage(payload);
         console.log(message.parts[0].text);
