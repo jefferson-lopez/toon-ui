@@ -14,8 +14,8 @@ Do NOT read this as “ToonUI requires Vercel AI SDK”. It does not.
 
 ## Quick path
 
-1. Server: `createToonProtocol()`.
-2. Client: `createToonClient()`.
+1. Server: `createToonProtocol({ components })`.
+2. Client: `createToonReactRuntime({ components })`.
 3. Host renders markdown with its own renderer.
 4. ToonUI renders only `toon-ui` blocks.
 5. Reinject interactions with `toon.messages.toUIMessage(payload)`.
@@ -35,7 +35,9 @@ This separation matters. ToonUI teaches the model how to write UI, but your host
 ```ts
 import { createToonProtocol } from '@toon-ui/core';
 
-const toon = createToonProtocol();
+const toon = createToonProtocol({
+  components: ['text', 'card', 'form', 'field', 'button', 'table'],
+});
 const system = [toon.prompt, 'Available tools:', '- searchProducts(query)'].join('
 
 ');
@@ -48,9 +50,18 @@ const system = [toon.prompt, 'Available tools:', '- searchProducts(query)'].join
 
 import { useChat } from '@ai-sdk/react';
 import { MessageResponse } from '@ai-sdk/ui';
-import { ToonRenderer, createToonClient, extractToonMarkdown } from '@toon-ui/toon-ui';
+import { ToonRenderer, createToonReactRuntime, extractToonMarkdown } from '@toon-ui/react';
 
-const toon = createToonClient();
+const toon = createToonReactRuntime({
+  components: {
+    text: TextComponent,
+    card: CardComponent,
+    form: FormComponent,
+    field: FieldComponent,
+    button: ButtonComponent,
+    table: TableComponent,
+  },
+});
 
 export function AssistantChat() {
   const { messages, setMessages } = useChat();
@@ -101,4 +112,4 @@ In those cases, keep ToonUI and replace only the host chat loop.
 ## Avoid
 
 - rendering raw protocol text to users
-- using `createToonClient()` on the server
+- using `createToonReactRuntime()` on the server

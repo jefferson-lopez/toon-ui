@@ -2,7 +2,7 @@
 
 `@toon-ui/react` is the explicit React integration layer for ToonUI.
 
-Use it when you want to own the UI adapter instead of relying on the default client package.
+Use it when you want to own the UI adapter and the active ToonUI component catalog explicitly.
 
 ## Quick path
 
@@ -37,7 +37,6 @@ Do NOT force `react` or `react-dom` in this command. Those belong to the host fr
 - `getToonInputProps()`
 - `getToonTextareaProps()`
 - `getToonCheckboxProps()`
-- `basicPreset()`
 - `useToonAction()`
 
 ## Recommended adapter pattern
@@ -55,8 +54,11 @@ function MyButton(props: ToonButtonComponentProps) {
 }
 
 const adapter = createToonReactAdapter({
-  level: 'default',
   components: {
+    text: TextComponent,
+    card: CardComponent,
+    form: FormComponent,
+    field: FieldComponent,
     button: MyButton,
   },
 });
@@ -71,10 +73,9 @@ A raw component registry was weak API design.
 An adapter makes the contract explicit:
 
 - what UI you replace
-- what defaults remain
 - where interaction wiring comes from
 - what coverage is still missing via `adapter.meta.missingKeys`
-- whether the adapter is `minimal`, `default`, or `strict`
+- whether the adapter is `minimal` or `strict`
 
 ```ts
 console.log(adapter.meta.level);
@@ -84,7 +85,6 @@ console.log(adapter.meta.missingKeys);
 
 Use the levels like this:
 
-- `default` -> merges ToonUI defaults plus your overrides
 - `minimal` -> only what you register manually
 - `strict` -> requires full coverage and throws if any adapter slot is missing
 

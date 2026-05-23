@@ -6,9 +6,6 @@ What changed and why?
 
 - [ ] `@toon-ui/core`
 - [ ] `@toon-ui/react`
-- [ ] `@toon-ui/toon-ui`
-- [ ] `@toon-ui/prompts`
-- [ ] `@toon-ui/cli`
 - [ ] docs only
 
 ## Verification

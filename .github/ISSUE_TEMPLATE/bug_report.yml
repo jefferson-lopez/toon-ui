@@ -24,7 +24,7 @@ body:
     id: packages
     attributes:
       label: Affected package(s)
-      placeholder: "@toon-ui/core, @toon-ui/react, @toon-ui/toon-ui"
+      placeholder: "@toon-ui/core, @toon-ui/react"
     validations:
       required: true
   - type: textarea

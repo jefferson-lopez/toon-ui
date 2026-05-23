@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useMemo, useState } from 'react';
+import React, { createContext, memo, useContext, useMemo, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import type {
   AlertNode,
@@ -20,7 +20,7 @@ import type {
   ToonNodeByType,
   ToonRuntime,
 } from '@toon-ui/core';
-import { createToonCoreRuntime } from '@toon-ui/core';
+import { createToonCatalog, createToonCoreRuntime } from '@toon-ui/core';
 
 export type ToonFieldValue = string | number | boolean | string[];
 
@@ -49,6 +49,7 @@ type BaseProps<TNode extends ToonNode> = {
 };
 
 export type ToonTextComponentProps = BaseProps<TextNode>;
+export type ToonGenericComponentProps<TType extends keyof ToonNodeByType> = BaseProps<ToonNodeByType[TType]>;
 export type ToonCardComponentProps = BaseProps<CardNode>;
 export type ToonConfirmComponentProps = BaseProps<ConfirmNode>;
 export type ToonListComponentProps = BaseProps<ListNode>;
@@ -73,7 +74,9 @@ export type ToonFormComponentProps = BaseProps<FormNode> & {
   disabled: boolean;
 };
 
-export interface ToonReactComponentPropsByType {
+export type ToonReactComponentPropsByType = {
+  [K in keyof ToonNodeByType]: ToonGenericComponentProps<K>;
+} & {
   text: ToonTextComponentProps;
   card: ToonCardComponentProps;
   form: ToonFormComponentProps;
@@ -86,7 +89,7 @@ export interface ToonReactComponentPropsByType {
   alert: ToonAlertComponentProps;
   table: ToonTableComponentProps;
   empty: ToonEmptyComponentProps;
-}
+};
 
 export const TOON_REACT_ADAPTER_KEYS = [
   'text',
@@ -101,6 +104,28 @@ export const TOON_REACT_ADAPTER_KEYS = [
   'alert',
   'table',
   'empty',
+  'heading',
+  'separator',
+  'tabs',
+  'tab',
+  'accordion',
+  'section',
+  'dialog',
+  'sheet',
+  'popover',
+  'tooltip',
+  'progress',
+  'loading',
+  'toast',
+  'breadcrumb',
+  'crumb',
+  'pagination',
+  'menu',
+  'command',
+  'action',
+  'chart',
+  'series',
+  'point',
 ] as const;
 
 export type ToonReactAdapterComponentKey = (typeof TOON_REACT_ADAPTER_KEYS)[number];
@@ -109,11 +134,10 @@ export type ToonReactComponentRegistry = Partial<{
   [K in keyof ToonReactComponentPropsByType]: React.ComponentType<ToonReactComponentPropsByType[K]>;
 }>;
 
-export type ToonReactAdapterLevel = 'minimal' | 'default' | 'strict';
+export type ToonReactAdapterLevel = 'minimal' | 'strict';
 
 export interface ToonReactAdapterMeta {
   level: ToonReactAdapterLevel;
-  includesDefaults: boolean;
   isComplete: boolean;
   providedKeys: ToonReactAdapterComponentKey[];
   missingKeys: ToonReactAdapterComponentKey[];
@@ -147,6 +171,8 @@ export interface ToonReactLayoutOptions {
 
 export interface CreateToonReactRuntimeOptions {
   adapter?: ToonReactAdapter;
+  components?: ToonReactComponentRegistry;
+  adapterLevel?: ToonReactAdapterLevel;
   layout?: ToonReactLayoutOptions;
 }
 
@@ -201,7 +227,6 @@ export function getToonAdapterCoverage(
 
   return {
     level,
-    includesDefaults: level === 'default',
     isComplete,
     providedKeys: [...providedKeys],
     missingKeys: [...missingKeys],
@@ -219,10 +244,8 @@ export function assertToonReactAdapter(adapter: ToonReactAdapter): ToonReactAdap
 export function createToonReactAdapter(
   options: CreateToonReactAdapterOptions = {},
 ): ToonReactAdapter {
-  const level = options.level ?? 'default';
-  const components = level === 'default'
-    ? mergeToonComponentRegistry(basicPreset(), options.components)
-    : mergeToonComponentRegistry(options.components);
+  const level = options.level ?? 'minimal';
+  const components = mergeToonComponentRegistry(options.components);
 
   const adapter = {
     components,
@@ -243,11 +266,18 @@ export function createToonReactRuntime(
     nodeGap: options.layout?.nodeGap ?? defaultLayout.nodeGap,
   };
 
-  const adapter = options.adapter ?? createToonReactAdapter({ level: 'default' });
+  const adapter = options.adapter ?? createToonReactAdapter({
+    level: options.adapterLevel ?? 'minimal',
+    components: options.components,
+  });
+  if (adapter.meta.providedKeys.length === 0) {
+    throw new Error('createToonReactRuntime requires a ToonUI component catalog. Pass components or an explicit adapter.');
+  }
 
   return {
     ...createToonCoreRuntime<ToonReactComponentRegistry>({
       components: adapter.components,
+      catalog: createToonCatalog({ components: adapter.components }),
     }),
     adapter,
     layout,
@@ -469,10 +499,14 @@ export function ToonProvider({
 }) {
   const [formState, setFormState] = useState<Record<string, Record<string, ToonFieldValue>>>({});
   const [resolvedBlocks, setResolvedBlocks] = useState<Record<string, true>>({});
+  const onReplyRef = useRef<typeof onReply>(onReply);
+  const onSubmitRef = useRef<typeof onSubmit>(onSubmit);
+  onReplyRef.current = onReply;
+  onSubmitRef.current = onSubmit;
 
   const contextValue = useMemo<ToonRenderContextValue>(() => ({
     sendReply: (payload) => {
-      onReply?.(payload);
+      onReplyRef.current?.(payload);
     },
     submitForm: (form) => {
       const fields = form.children.filter((child): child is FieldNode => child.type === 'field');
@@ -483,7 +517,7 @@ export function ToonProvider({
         return accumulator;
       }, {});
 
-      onSubmit?.({
+      onSubmitRef.current?.({
         kind: 'ui_submit',
         eventId: createEventId('submit'),
         source: 'form',
@@ -515,7 +549,7 @@ export function ToonProvider({
     resolveBlock: (blockId) => {
       setResolvedBlocks((current) => (current[blockId] ? current : { ...current, [blockId]: true }));
     },
-  }), [formState, interactive, onReply, onSubmit, resolvedBlocks, runtime]);
+  }), [formState, interactive, resolvedBlocks]);
 
   return (
     <ToonRuntimeContext.Provider value={runtime}>
@@ -564,151 +598,14 @@ function useToonRenderContext() {
   return context;
 }
 
-function renderFallback(node: ToonNode, children: React.ReactNode, form: FormNode | undefined, context: ToonRenderContextValue, key: React.Key, blockResolved = false): React.ReactNode {
-  const layout = useToonUI().layout;
-  const nestedBlockStyle = createStackStyle(layout.nodeGap);
-  const surfaceStyle = createSurfaceStyle(layout.nodeGap);
-
-  switch (node.type) {
-    case 'text':
-      return <p key={key} style={{ margin: 0 }}>{node.value}</p>;
-    case 'heading':
-      if (node.level === 1) return <h1 key={key} style={{ margin: 0 }}>{node.text}</h1>;
-      if (node.level === 2) return <h2 key={key} style={{ margin: 0 }}>{node.text}</h2>;
-      if (node.level === 3) return <h3 key={key} style={{ margin: 0 }}>{node.text}</h3>;
-      if (node.level === 4) return <h4 key={key} style={{ margin: 0 }}>{node.text}</h4>;
-      if (node.level === 5) return <h5 key={key} style={{ margin: 0 }}>{node.text}</h5>;
-      return <h6 key={key} style={{ margin: 0 }}>{node.text}</h6>;
-    case 'separator':
-      return <hr key={key} style={{ width: '100%', border: 0, borderTop: '1px solid #d1d5db' }} />;
-    case 'badge':
-      return <span key={key} style={{ display: 'inline-flex', width: 'fit-content' }}>{node.label}</span>;
-    case 'button':
-      return (
-        <button
-          key={key}
-          type="button"
-          disabled={blockResolved}
-          onClick={() => blockResolved ? undefined : node.action.kind === 'reply' ? context.sendReply({ kind: 'ui_reply', eventId: createEventId('reply'), source: 'button', component: 'button', value: node.action.value, line: node.line, node }) : form ? context.submitForm(form) : undefined}
-        >
-          {node.label}
-        </button>
-      );
-    case 'field':
-      return (
-        <label key={key} style={createSurfaceStyle(6)}>
-          {node.label}
-          {node.fieldType === 'textarea' ? (
-            <textarea
-              name={node.name}
-              disabled={blockResolved}
-              placeholder={node.placeholder}
-              style={{ width: '100%', minWidth: 0, boxSizing: 'border-box' }}
-              value={String(context.getFieldValue(form, node) ?? '')}
-              onChange={(event) => blockResolved ? undefined : context.setFieldValue(form, node, event.target.value)}
-            />
-          ) : node.fieldType === 'checkbox' ? (
-            <input
-              type="checkbox"
-              name={node.name}
-              disabled={blockResolved}
-              checked={Boolean(context.getFieldValue(form, node))}
-              onChange={(event) => blockResolved ? undefined : context.setFieldValue(form, node, event.target.checked)}
-            />
-          ) : (
-            <input
-              name={node.name}
-              disabled={blockResolved}
-              placeholder={node.placeholder}
-              style={{ width: '100%', minWidth: 0, boxSizing: 'border-box' }}
-              value={Array.isArray(context.getFieldValue(form, node)) ? (context.getFieldValue(form, node) as string[]).join(', ') : String(context.getFieldValue(form, node) ?? '')}
-              onChange={(event) => blockResolved ? undefined : context.setFieldValue(form, node, event.target.value)}
-            />
-          )}
-        </label>
-      );
-    case 'card':
-    case 'confirm':
-    case 'form':
-    case 'item':
-    case 'alert':
-    case 'empty':
-    case 'dialog':
-    case 'sheet':
-    case 'popover':
-      return <section key={key} style={surfaceStyle}><strong>{node.title}</strong>{renderNodeDescription(getNodeDescription(node))}<div style={nestedBlockStyle}>{children}</div></section>;
-    case 'list':
-    case 'tabs':
-    case 'accordion':
-    case 'menu':
-    case 'command':
-      return <section key={key} style={surfaceStyle}><strong>{node.title}</strong><div style={nestedBlockStyle}>{children}</div></section>;
-    case 'tab':
-      return <section key={key} style={createSurfaceStyle(8, { border: '1px solid #e5e7eb', borderRadius: 10, padding: 12 })}><strong>{node.label}</strong><div style={nestedBlockStyle}>{children}</div></section>;
-    case 'section':
-      return <section key={key} style={createSurfaceStyle(8, { border: '1px solid #e5e7eb', borderRadius: 10, padding: 12 })}><strong>{node.title}</strong><div style={nestedBlockStyle}>{children}</div></section>;
-    case 'series':
-      return <section key={key} style={createSurfaceStyle(8, { border: '1px solid #e5e7eb', borderRadius: 10, padding: 12 })}><strong>{node.label}</strong><div style={nestedBlockStyle}>{children}</div></section>;
-    case 'tooltip':
-      return <span key={key} style={{ display: 'inline-flex', width: 'fit-content', padding: '4px 8px', borderRadius: 999, background: '#111827', color: '#fff' }}>{node.text}</span>;
-    case 'progress':
-      return (
-        <div key={key} style={surfaceStyle}>
-          <strong>{node.label}</strong>
-          <progress value={node.value} max={node.max} style={{ width: '100%' }} />
-          <span>{node.value}/{node.max}</span>
-        </div>
-      );
-    case 'loading':
-      return <div key={key} style={surfaceStyle}><strong>Cargando</strong><span>{node.text}</span></div>;
-    case 'toast':
-      return <div key={key} style={createSurfaceStyle(6, { border: '1px solid #d1d5db', borderRadius: 10, padding: 12 })}><strong>{node.variant.toUpperCase()}</strong><span>{node.text}</span></div>;
-    case 'breadcrumb':
-      return <nav key={key} style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>{children}</nav>;
-    case 'crumb':
-      return <span key={key} style={{ color: '#4b5563' }}>{node.label}</span>;
-    case 'pagination':
-      return <div key={key} style={{ display: 'flex', gap: 8, alignItems: 'center' }}><strong>Página</strong><span>{node.page} de {node.totalPages}</span></div>;
-    case 'action':
-      return (
-        <button
-          key={key}
-          type="button"
-          disabled={blockResolved}
-          onClick={() => blockResolved ? undefined : node.action.kind === 'reply' ? context.sendReply({ kind: 'ui_reply', eventId: createEventId('reply'), source: 'button', component: 'button', value: node.action.value, line: node.line, node: node as never }) : form ? context.submitForm(form) : undefined}
-        >
-          {node.label}
-        </button>
-      );
-    case 'table':
-      return <pre key={key}>{JSON.stringify({ columns: node.columns, rows: node.rows }, null, 2)}</pre>;
-    case 'chart':
-      return (
-        <section key={key} style={surfaceStyle}>
-          <strong>{node.title}</strong>
-          <div style={nestedBlockStyle}>
-            {node.children.map((series) => (
-              <div key={`${series.label}-${series.line}`} style={createSurfaceStyle(6, { border: '1px solid #e5e7eb', borderRadius: 10, padding: 12 })}>
-                <strong>{series.label}</strong>
-                {series.children.map((point) => (
-                  <div key={`${point.label}-${point.line}`} style={{ display: 'grid', gap: 4 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
-                      <span>{point.label}</span>
-                      <span>{point.value}</span>
-                    </div>
-                    <div style={{ height: 8, background: '#e5e7eb', borderRadius: 999 }}>
-                      <div style={{ width: `${Math.max(4, Math.min(100, point.value))}%`, height: '100%', background: '#111827', borderRadius: 999 }} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ))}
-          </div>
-        </section>
-      );
-    default:
-      return null;
-  }
+function renderFallback(node: ToonNode, _children: React.ReactNode, _form: FormNode | undefined, _context: ToonRenderContextValue, key: React.Key, _blockResolved = false): React.ReactNode {
+  return (
+    <ToonError
+      key={key}
+      message={`Component "${node.type}" is not registered in the active ToonUI React adapter.`}
+      details={['Register this standard ToonUI component or remove it from the server catalog used to generate toon.prompt.']}
+    />
+  );
 }
 
 function RegisteredNode({ node, form, nodeKey, blockId }: { node: ToonNode; form?: FormNode; nodeKey: React.Key; blockId: string }) {
@@ -802,12 +699,14 @@ function RegisteredNode({ node, form, nodeKey, blockId }: { node: ToonNode; form
       const Component = runtime.components.table;
       return Component ? <Component node={node} context={context} disabled={blockResolved} /> : renderFallback(node, children, activeForm, context, nodeKey, blockResolved);
     }
-    default:
-      return renderFallback(node, children, activeForm, context, nodeKey, blockResolved);
+    default: {
+      const Component = runtime.components[node.type as keyof ToonReactComponentRegistry] as React.ComponentType<BaseProps<ToonNode>> | undefined;
+      return Component ? <Component node={node} context={context} disabled={blockResolved}>{children}</Component> : renderFallback(node, children, activeForm, context, nodeKey, blockResolved);
+    }
   }
 }
 
-function ToonRenderedBlock({
+function ToonRenderedBlockComponent({
   block,
   index,
   renderError,
@@ -819,44 +718,62 @@ function ToonRenderedBlock({
   showErrorDetails?: boolean;
 }) {
   const runtime = useToonUI();
+  const parsed = useMemo(() => {
+    try {
+      const ast = runtime.parse(block.raw);
+      const result = runtime.validate(ast, runtime.catalog);
 
-  try {
-    const ast = runtime.parse(block.raw);
-    const result = runtime.validate(ast);
-    if (block.complete && !result.ok) {
-      const errorState: ToonRenderErrorState = {
-        kind: 'validation',
-        block,
-        message: 'This interface could not be displayed.',
-        details: result.errors.map((error) => error.message),
-      };
-
-      return renderError
-        ? <>{renderError(errorState)}</>
-        : <ToonError message={errorState.message} details={showErrorDetails ? errorState.details : []} />;
+      return { kind: 'success' as const, ast, result };
+    } catch (error) {
+      return { kind: 'parse-error' as const, error };
     }
+  }, [block.raw, runtime]);
 
-    return (
-      <div data-toon-ui-block style={createStackStyle(runtime.layout.blockGap)}>
-        {ast.body.map((node, nodeIndex) => (
-          <RegisteredNode key={`${index}-${nodeIndex}`} node={node} nodeKey={`${index}-${nodeIndex}`} blockId={`block-${index}`} />
-        ))}
-      </div>
-    );
-  } catch (error) {
+  if (parsed.kind === 'parse-error') {
     const errorState: ToonRenderErrorState = {
       kind: 'parse',
       block,
       message: 'This interface could not be displayed.',
-      details: [error instanceof Error ? error.message : 'Unknown ToonUI error'],
-      cause: error,
+      details: [parsed.error instanceof Error ? parsed.error.message : 'Unknown ToonUI error'],
+      cause: parsed.error,
     };
 
     return renderError
       ? <>{renderError(errorState)}</>
       : <ToonError message={errorState.message} details={showErrorDetails ? errorState.details : []} />;
   }
+
+  if (block.complete && !parsed.result.ok) {
+    const errorState: ToonRenderErrorState = {
+      kind: 'validation',
+      block,
+      message: 'This interface could not be displayed.',
+      details: parsed.result.errors.map((error) => error.message),
+    };
+
+    return renderError
+      ? <>{renderError(errorState)}</>
+      : <ToonError message={errorState.message} details={showErrorDetails ? errorState.details : []} />;
+  }
+
+  return (
+    <div data-toon-ui-block style={createStackStyle(runtime.layout.blockGap)}>
+      {parsed.ast.body.map((node, nodeIndex) => (
+        <RegisteredNode key={`${index}-${nodeIndex}`} node={node} nodeKey={`${index}-${nodeIndex}`} blockId={`block-${index}`} />
+      ))}
+    </div>
+  );
 }
+
+const ToonRenderedBlock = memo(ToonRenderedBlockComponent, (previous, next) => (
+  previous.index === next.index
+  && previous.block.raw === next.block.raw
+  && previous.block.start === next.block.start
+  && previous.block.end === next.block.end
+  && previous.block.complete === next.block.complete
+  && previous.renderError === next.renderError
+  && previous.showErrorDetails === next.showErrorDetails
+));
 
 function ToonRendererInner({
   content,
@@ -868,7 +785,7 @@ function ToonRendererInner({
   showErrorDetails?: boolean;
 }) {
   const runtime = useToonUI();
-  const blocks = runtime.extractBlocks(content);
+  const blocks = useMemo(() => runtime.extractBlocks(content), [content, runtime]);
   if (blocks.length === 0) return null;
 
   return (
@@ -902,16 +819,7 @@ export function ToonRenderer({
   );
 }
 
-export function ToonMessage({
-  content,
-  runtime,
-  onReply,
-  onSubmit,
-  renderMarkdown = (markdown) => <ReactMarkdown>{markdown}</ReactMarkdown>,
-  interactive = true,
-  renderError,
-  showErrorDetails = false,
-}: {
+export interface ToonMessageProps {
   content: string;
   runtime: ToonReactRuntime;
   onReply?: (payload: ToonReplyPayload) => void;
@@ -920,8 +828,19 @@ export function ToonMessage({
   interactive?: boolean;
   renderError?: ToonErrorRenderer;
   showErrorDetails?: boolean;
-}) {
-  const segments = extractToonSegments(content);
+}
+
+function ToonMessageComponent({
+  content,
+  runtime,
+  onReply,
+  onSubmit,
+  renderMarkdown = (markdown) => <ReactMarkdown>{markdown}</ReactMarkdown>,
+  interactive = true,
+  renderError,
+  showErrorDetails = false,
+}: ToonMessageProps) {
+  const segments = useMemo(() => extractToonSegments(content), [content]);
 
   return (
     <div data-toon-ui-message style={createStackStyle(runtime.layout.messageGap)}>
@@ -943,6 +862,17 @@ export function ToonMessage({
   );
 }
 
+export const ToonMessage = memo(ToonMessageComponent, (previous, next) => (
+  previous.content === next.content
+  && previous.runtime === next.runtime
+  && previous.onReply === next.onReply
+  && previous.onSubmit === next.onSubmit
+  && previous.renderMarkdown === next.renderMarkdown
+  && previous.interactive === next.interactive
+  && previous.renderError === next.renderError
+  && previous.showErrorDetails === next.showErrorDetails
+));
+
 export function ToonError({ message, details = [] }: { message: string; details?: string[] }) {
   return (
     <div role="alert" data-toon-error>
@@ -957,124 +887,3 @@ export function ToonError({ message, details = [] }: { message: string; details?
 }
 
 export type ToonTypedNode<TType extends keyof ToonNodeByType> = ToonNodeByType[TType];
-
-function presetTone(variant?: string): React.CSSProperties {
-  switch (variant) {
-    case 'primary':
-    case 'success':
-    case 'info':
-      return { background: '#111827', color: '#ffffff' };
-    case 'neutral':
-    case 'secondary':
-      return { background: '#e5e7eb', color: '#111827' };
-    case 'danger':
-      return { background: '#dc2626', color: '#ffffff' };
-    case 'warning':
-      return { background: '#f59e0b', color: '#111827' };
-    case 'ghost':
-    case 'outline':
-      return { background: 'transparent', color: '#111827', border: '1px solid #d1d5db' };
-    default:
-      return { background: '#f3f4f6', color: '#111827' };
-  }
-}
-
-function createPresetSurface(variant?: string): React.CSSProperties {
-  const tone = presetTone(variant);
-  return {
-    border: `1px solid ${variant === 'danger' ? '#fca5a5' : variant === 'warning' ? '#fcd34d' : variant === 'success' ? '#86efac' : variant === 'info' ? '#93c5fd' : '#e5e7eb'}`,
-    borderRadius: 12,
-    padding: 16,
-    display: 'grid',
-    gap: 12,
-    width: '100%',
-    minWidth: 0,
-    boxSizing: 'border-box',
-    background: tone.background === 'transparent' ? '#ffffff' : tone.background,
-    color: tone.color,
-  };
-}
-
-export function basicPreset(): ToonReactComponentRegistry {
-  return {
-    text: ({ node }: ToonTextComponentProps) => <p style={{ margin: 0 }}>{node.value}</p>,
-    badge: ({ node }: ToonBadgeComponentProps) => <span style={{ ...presetTone(node.variant), padding: '2px 8px', borderRadius: 999, display: 'inline-flex', width: 'fit-content' }}>{node.label}</span>,
-    button: ({ node, sendReply, submitForm, disabled }: ToonButtonComponentProps) => (
-      <button
-        style={{ ...presetTone(node.variant), padding: '8px 12px', borderRadius: 8 }}
-        {...getToonButtonProps({ node, sendReply, submitForm, disabled })}
-      >
-        {node.label}
-      </button>
-    ),
-    field: ({ node, value, onChange, disabled }: ToonFieldComponentProps) => (
-      <label style={{ display: 'grid', gap: 6, width: '100%', minWidth: 0 }}>
-        <span>{node.label}</span>
-        <input
-          style={{ width: '100%', minWidth: 0, boxSizing: 'border-box' }}
-          {...getToonInputProps({ node, value, onChange, disabled })}
-          aria-required={node.required}
-        />
-      </label>
-    ),
-    card: ({ node, children }: ToonCardComponentProps) => (
-      <section style={createPresetSurface()}>
-        <strong>{node.title}</strong>
-        {renderNodeDescription(node.description)}
-        {children}
-      </section>
-    ),
-    confirm: ({ node, children }: ToonConfirmComponentProps) => (
-      <section style={createPresetSurface(node.variant)}>
-        <strong>{node.title}</strong>
-        {renderNodeDescription(node.description)}
-        {children}
-      </section>
-    ),
-    form: ({ node, children }: ToonFormComponentProps) => (
-      <section style={createPresetSurface()}>
-        <strong>{node.title}</strong>
-        {renderNodeDescription(node.description)}
-        {children}
-      </section>
-    ),
-    item: ({ node, children }: ToonItemComponentProps) => (
-      <section style={createPresetSurface()}>
-        <strong>{node.title}</strong>
-        {renderNodeDescription(node.description)}
-        {children}
-      </section>
-    ),
-    list: ({ node, children }: ToonListComponentProps) => (
-      <section style={{ display: 'grid', gap: 12, width: '100%', minWidth: 0, boxSizing: 'border-box' }}>
-        <strong>{node.title}</strong>
-        {children}
-      </section>
-    ),
-    alert: ({ node, children }: ToonAlertComponentProps) => (
-      <section style={createPresetSurface(node.variant)}>
-        <strong>{node.title}</strong>
-        {children}
-      </section>
-    ),
-    empty: ({ node, children }: ToonEmptyComponentProps) => (
-      <section style={createPresetSurface()}>
-        <strong>{node.title}</strong>
-        {renderNodeDescription(node.description)}
-        {children}
-      </section>
-    ),
-    table: ({ node }: ToonTableComponentProps) => (
-      <table>
-        <thead>
-          <tr>{node.columns.map((column: string) => <th key={column}>{column}</th>)}</tr>
-        </thead>
-        <tbody>
-          {node.rows.map((row: string[], rowIndex: number) => (
-            <tr key={rowIndex}>{row.map((cell: string, cellIndex: number) => <td key={`${rowIndex}-${cellIndex}`}>{cell}</td>)}</tr>
-          ))}
-        </tbody>
-      </table>
-    ),
-  };
-}

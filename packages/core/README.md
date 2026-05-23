@@ -6,8 +6,8 @@ Use it when you need the server model, the central catalog, parsing, validation,
 
 ## Quick path
 
-1. Create a protocol with `createToonProtocol()`.
-2. Feed `toon.prompt` into your system prompt.
+1. Create a protocol with the standard ToonUI components your app actually supports.
+2. Feed the generated `toon.prompt` into your system prompt.
 3. Use `toon.catalog`, `toon.events`, and `toon.messages` as the public API.
 
 ## Install
@@ -33,16 +33,22 @@ pnpm add @toon-ui/core
 ```ts
 import { createToonProtocol } from '@toon-ui/core';
 
-const toon = createToonProtocol();
+const toon = createToonProtocol({
+  components: ['text', 'card', 'form', 'field', 'button', 'table'],
+});
 const system = [toon.prompt, 'Available tools:', '- searchProducts(query)'].join('
 
 ');
 ```
 
+`toon.prompt` is generated from the active catalog subset. If `chart` is not enabled, the prompt will not teach the model to emit `chart`.
+
 ## Public API shape
 
 ```ts
-const toon = createToonProtocol();
+const toon = createToonProtocol({
+  components: ['text', 'card', 'form', 'field', 'button'],
+});
 
 toon.catalog.components.form.syntax;
 toon.events.reply('Open details');
@@ -68,5 +74,4 @@ The new model is explicit:
 
 If you need rendering:
 
-- `@toon-ui/react` for explicit adapters
-- `@toon-ui/toon-ui` for the simplest client path
+- `@toon-ui/react` for client rendering and adapters

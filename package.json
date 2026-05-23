@@ -1,7 +1,7 @@
 {
   "name": "toon-ui-monorepo",
   "private": true,
-  "version": "2.0.5",
+  "version": "2.1.4",
   "license": "Apache-2.0",
   "packageManager": "pnpm@10.0.0",
   "scripts": {
@@ -16,10 +16,7 @@
     "release": "pnpm release:publish",
     "publish:core": "pnpm --filter @toon-ui/core publish --access public --no-git-checks",
     "publish:react": "pnpm --filter @toon-ui/react publish --access public --no-git-checks",
-    "publish:prompts": "pnpm --filter @toon-ui/prompts publish --access public --no-git-checks",
-    "publish:toon-ui": "pnpm --filter @toon-ui/toon-ui publish --access public --no-git-checks",
-    "publish:cli": "pnpm --filter @toon-ui/cli publish --access public --no-git-checks",
-    "publish:all": "pnpm publish:core && pnpm publish:react && pnpm publish:prompts && pnpm publish:toon-ui && pnpm publish:cli",
+    "publish:all": "pnpm publish:core && pnpm publish:react",
     "test": "turbo run test",
     "typecheck": "turbo run typecheck"
   },

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { TOON_ALERT_VARIANTS as ALERT_VARIANTS, TOON_BADGE_VARIANTS as BADGE_VARIANTS, TOON_BUTTON_VARIANTS as BUTTON_VARIANTS, TOON_CHART_TYPES as CHART_TYPES, TOON_CONFIRM_VARIANTS as CONFIRM_VARIANTS, TOON_FIELD_TYPES as FIELD_TYPES, TOON_SEPARATOR_ORIENTATIONS as SEPARATOR_ORIENTATIONS, TOON_SHEET_SIDES as SHEET_SIDES } from './catalog';
+import { TOON_ALERT_VARIANTS as ALERT_VARIANTS, TOON_BADGE_VARIANTS as BADGE_VARIANTS, TOON_BUTTON_VARIANTS as BUTTON_VARIANTS, TOON_CATALOG, TOON_CHART_TYPES as CHART_TYPES, TOON_CONFIRM_VARIANTS as CONFIRM_VARIANTS, TOON_FIELD_TYPES as FIELD_TYPES, TOON_SEPARATOR_ORIENTATIONS as SEPARATOR_ORIENTATIONS, TOON_SHEET_SIDES as SHEET_SIDES, type ToonActiveCatalog } from './catalog';
 import { type ActionNode, type ChartNode, type ConfirmNode, type CrumbNode, type FieldNode, type ToonDocument, type ToonNode, type ValidationIssue, type ValidationResult } from './types';
 
 const buttonVariantSchema = z.enum(BUTTON_VARIANTS);
@@ -47,14 +47,14 @@ function validateFieldNode(field: FieldNode, issues: ValidationIssue[]): void {
   }
 }
 
-function validateConfirmNode(confirm: ConfirmNode, issues: ValidationIssue[]): void {
+function validateConfirmNode(confirm: ConfirmNode, issues: ValidationIssue[], catalog: ToonActiveCatalog): void {
   if (!confirmVariantSchema.safeParse(confirm.variant).success) {
     issues.push(issue('INVALID_VARIANT', `Invalid confirm variant: ${confirm.variant}`, confirm.line, confirm.column));
   }
-  confirm.children.forEach((child) => visit(child, issues));
+  confirm.children.forEach((child) => visit(child, issues, catalog));
 }
 
-function validateChartNode(chart: ChartNode, issues: ValidationIssue[]): void {
+function validateChartNode(chart: ChartNode, issues: ValidationIssue[], catalog: ToonActiveCatalog): void {
   if (!chartTypeSchema.safeParse(chart.chartType).success) {
     issues.push(issue('INVALID_PROP', `Invalid chart type: ${chart.chartType}`, chart.line, chart.column));
   }
@@ -62,6 +62,10 @@ function validateChartNode(chart: ChartNode, issues: ValidationIssue[]): void {
     issues.push(issue('MISSING_REQUIRED_FIELD', 'Charts must include at least one series.', chart.line, chart.column));
   }
   chart.children.forEach((series) => {
+    if (!catalog.components.series) {
+      issues.push(issue('INVALID_COMPONENT', 'Component "series" is not enabled in the active ToonUI catalog.', series.line, series.column));
+      return;
+    }
     if (series.type !== 'series') {
       issues.push(issue('INVALID_NESTING', 'Charts can only contain series nodes.', series.line, series.column));
       return;
@@ -70,6 +74,10 @@ function validateChartNode(chart: ChartNode, issues: ValidationIssue[]): void {
       issues.push(issue('MISSING_REQUIRED_FIELD', 'Chart series must include at least one point.', series.line, series.column));
     }
     series.children.forEach((point) => {
+      if (!catalog.components.point) {
+        issues.push(issue('INVALID_COMPONENT', 'Component "point" is not enabled in the active ToonUI catalog.', point.line, point.column));
+        return;
+      }
       if (point.type !== 'point') {
         issues.push(issue('INVALID_NESTING', 'Chart series can only contain point nodes.', point.line, point.column));
       }
@@ -77,7 +85,12 @@ function validateChartNode(chart: ChartNode, issues: ValidationIssue[]): void {
   });
 }
 
-function visit(node: ToonNode, issues: ValidationIssue[]): void {
+function visit(node: ToonNode, issues: ValidationIssue[], catalog: ToonActiveCatalog): void {
+  if (!catalog.components[node.type as keyof typeof catalog.components]) {
+    issues.push(issue('INVALID_COMPONENT', `Component "${node.type}" is not enabled in the active ToonUI catalog.`, node.line, node.column));
+    return;
+  }
+
   ensureNoUnsafeText(node, issues);
 
   switch (node.type) {
@@ -98,7 +111,7 @@ function visit(node: ToonNode, issues: ValidationIssue[]): void {
       if (!alertVariantSchema.safeParse(node.variant).success) {
         issues.push(issue('INVALID_VARIANT', `Invalid alert variant: ${node.variant}`, node.line, node.column));
       }
-      node.children.forEach((child) => visit(child, issues));
+      node.children.forEach((child) => visit(child, issues, catalog));
       break;
     }
     case 'field': {
@@ -114,15 +127,15 @@ function visit(node: ToonNode, issues: ValidationIssue[]): void {
       if (submitButtons.length === 0) {
         issues.push(issue('MISSING_REQUIRED_FIELD', 'Forms must include a submit button.', node.line, node.column));
       }
-      node.children.forEach((child) => visit(child, issues));
+      node.children.forEach((child) => visit(child, issues, catalog));
       break;
     }
     case 'confirm':
-      validateConfirmNode(node, issues);
+      validateConfirmNode(node, issues, catalog);
       break;
     case 'card':
     case 'item': {
-      node.children.forEach((child) => visit(child, issues));
+      node.children.forEach((child) => visit(child, issues, catalog));
       break;
     }
     case 'heading': {
@@ -142,14 +155,14 @@ function visit(node: ToonNode, issues: ValidationIssue[]): void {
         if (child.type !== 'item') {
           issues.push(issue('INVALID_NESTING', 'Lists can only contain item nodes.', child.line, child.column));
         }
-        visit(child, issues);
+        visit(child, issues, catalog);
       });
       break;
     }
     case 'empty':
     case 'dialog':
     case 'popover': {
-      node.children.forEach((child) => visit(child, issues));
+      node.children.forEach((child) => visit(child, issues, catalog));
       break;
     }
     case 'tabs': {
@@ -161,7 +174,11 @@ function visit(node: ToonNode, issues: ValidationIssue[]): void {
           issues.push(issue('INVALID_NESTING', 'Tabs can only contain tab nodes.', child.line, child.column));
           return;
         }
-        child.children.forEach((grandChild) => visit(grandChild, issues));
+        if (!catalog.components.tab) {
+          issues.push(issue('INVALID_COMPONENT', 'Component "tab" is not enabled in the active ToonUI catalog.', child.line, child.column));
+          return;
+        }
+        child.children.forEach((grandChild) => visit(grandChild, issues, catalog));
       });
       break;
     }
@@ -174,7 +191,11 @@ function visit(node: ToonNode, issues: ValidationIssue[]): void {
           issues.push(issue('INVALID_NESTING', 'Accordion can only contain section nodes.', child.line, child.column));
           return;
         }
-        child.children.forEach((grandChild) => visit(grandChild, issues));
+        if (!catalog.components.section) {
+          issues.push(issue('INVALID_COMPONENT', 'Component "section" is not enabled in the active ToonUI catalog.', child.line, child.column));
+          return;
+        }
+        child.children.forEach((grandChild) => visit(grandChild, issues, catalog));
       });
       break;
     }
@@ -182,7 +203,7 @@ function visit(node: ToonNode, issues: ValidationIssue[]): void {
       if (!sheetSideSchema.safeParse(node.side).success) {
         issues.push(issue('INVALID_PROP', `Invalid sheet side: ${node.side}`, node.line, node.column));
       }
-      node.children.forEach((child) => visit(child, issues));
+      node.children.forEach((child) => visit(child, issues, catalog));
       break;
     }
     case 'tooltip':
@@ -248,7 +269,7 @@ function visit(node: ToonNode, issues: ValidationIssue[]): void {
       break;
     }
     case 'chart': {
-      validateChartNode(node, issues);
+      validateChartNode(node, issues, catalog);
       break;
     }
     default:
@@ -256,8 +277,8 @@ function visit(node: ToonNode, issues: ValidationIssue[]): void {
   }
 }
 
-export function validateToonUI(document: ToonDocument): ValidationResult {
+export function validateToonUI(document: ToonDocument, catalog: ToonActiveCatalog = TOON_CATALOG): ValidationResult {
   const errors: ValidationIssue[] = [];
-  document.body.forEach((node) => visit(node, errors));
+  document.body.forEach((node) => visit(node, errors, catalog));
   return { ok: errors.length === 0, errors, warnings: [] };
 }

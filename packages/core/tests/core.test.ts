@@ -125,9 +125,19 @@ describe('toon core', () => {
 
     expect(syntaxPrompt).toContain('NEVER output literal [] characters in ToonUI');
     expect(syntaxPrompt).toContain('item "Juan Pérez" description="juan@example.com":');
+    expect(syntaxPrompt).toContain('chart <type> "Title" [description="..."] [x="..."] [y="..."]:');
+    expect(syntaxPrompt).toContain('confirm, dialog, sheet, popover, tooltip, and command MAY include trigger="..."');
+    expect(syntaxPrompt).toContain('Literal valid trigger example: confirm danger "Delete customer?" trigger="Review deletion":');
     expect(syntaxPrompt).toContain('list only accepts item children');
+    expect(syntaxPrompt).toContain('NEVER emit option as a child node');
+    expect(syntaxPrompt).toContain('field category select "Category" options="Coffee|Tea|Chocolate" required');
     expect(fallbackPrompt).toContain('NEVER write [description="..."] literally.');
+    expect(fallbackPrompt).toContain('a short opener/launcher label belongs in trigger="..."');
     expect(selfCheckPrompt).toContain('NEVER emit square brackets such as [description="..."] in final ToonUI output');
+    expect(selfCheckPrompt).toContain('chart bar "Sales" description="Weekly revenue":');
+    expect(selfCheckPrompt).toContain('confirm, dialog, sheet, popover, tooltip, and command may use trigger="..."');
+    expect(selfCheckPrompt).toContain('select/radio/combobox/multiselect options syntax is exactly');
+    expect(selfCheckPrompt).toContain('There is no option node');
     expect(selfCheckPrompt).toContain('If the request asks for all or exhaustive coverage');
   });
 
@@ -149,8 +159,70 @@ describe('toon core', () => {
     expect(decisionPrompt).toContain('Do NOT claim a response is complete or exhaustive unless every official component has been explicitly covered');
     expect(examplesPrompt).toContain('Catalog-derived valid examples:');
     expect(examplesPrompt).toContain('list "Registered customers":');
-    expect(examplesPrompt).toContain('sheet "Customer activity" side="right":');
-    expect(examplesPrompt).toContain('command "Quick actions":');
+    expect(examplesPrompt).toContain('sheet "Customer activity" trigger="Open activity" side="right":');
+    expect(examplesPrompt).toContain('command "Quick actions" trigger="Open command palette":');
+  });
+
+  it('parses optional triggers for overlays, confirmations, tooltips and commands', () => {
+    const document = parseToonUI([
+      'confirm danger "Delete customer?" trigger="Review deletion":',
+      '  text "This action cannot be undone."',
+      'dialog "Edit customer" trigger="Open editor":',
+      '  text "Update contact information."',
+      'sheet "Customer activity" trigger="Open activity" side="right":',
+      '  text "Sale #1234 completed"',
+      'popover "More details" trigger="Show details":',
+      '  text "Average order value: $58"',
+      'tooltip "More context about this metric" trigger="What does this mean?"',
+      'command "Quick actions" trigger="Open command palette":',
+      '  action "Create customer" reply="Create customer"',
+    ].join('\n'));
+
+    expect(document.body[0]).toMatchObject({ type: 'confirm', trigger: 'Review deletion' });
+    expect(document.body[1]).toMatchObject({ type: 'dialog', trigger: 'Open editor' });
+    expect(document.body[2]).toMatchObject({ type: 'sheet', trigger: 'Open activity' });
+    expect(document.body[3]).toMatchObject({ type: 'popover', trigger: 'Show details' });
+    expect(document.body[4]).toMatchObject({ type: 'tooltip', trigger: 'What does this mean?' });
+    expect(document.body[5]).toMatchObject({ type: 'command', trigger: 'Open command palette' });
+    expect(validateToonUI(document).ok).toBe(true);
+  });
+
+  it('parses chart descriptions and axis labels', () => {
+    const document = parseToonUI([
+      'chart line "Revenue trend" description="Weekly revenue by store" x="Week" y="Revenue":',
+      '  series "Store A":',
+      '    point "Week 1" 1200',
+      '    point "Week 2" 1800',
+    ].join('\n'));
+
+    expect(document.body[0]).toMatchObject({
+      type: 'chart',
+      chartType: 'line',
+      title: 'Revenue trend',
+      description: 'Weekly revenue by store',
+      xLabel: 'Week',
+      yLabel: 'Revenue',
+    });
+    expect(validateToonUI(document).ok).toBe(true);
+  });
+
+  it('parses constrained field options from inline options attributes', () => {
+    const document = parseToonUI([
+      'form "Crear producto":',
+      '  field categoria select "Seleccionar Categoría" options="Café|Té|Chocolate|Infusiones" required',
+      '  field ingredientes multiselect "Seleccionar Ingredientes" options="Café|Leche|Azúcar|Canela|Chocolate" required',
+      '  button primary "Crear" submit',
+    ].join('\n'));
+
+    expect(document.body[0]).toMatchObject({
+      type: 'form',
+      children: [
+        { type: 'field', name: 'categoria', fieldType: 'select', options: ['Café', 'Té', 'Chocolate', 'Infusiones'] },
+        { type: 'field', name: 'ingredientes', fieldType: 'multiselect', options: ['Café', 'Leche', 'Azúcar', 'Canela', 'Chocolate'] },
+        { type: 'button' },
+      ],
+    });
+    expect(validateToonUI(document).ok).toBe(true);
   });
 
   it('rejects meta because the official catalog is closed', () => {
@@ -265,6 +337,35 @@ describe('toon core', () => {
       component: 'button',
       value: 'Abrir detalle',
     })).toContain('ui_reply:');
+  });
+
+  it('generates the server prompt from the configured standard catalog subset', () => {
+    const protocol = createToonProtocol({ components: ['text', 'button'] });
+
+    expect(protocol.rules.components).toEqual(['text', 'button']);
+    expect(protocol.prompt).toContain('Allowed components: text, button');
+    expect(protocol.prompt).toContain('text "Visible text"');
+    expect(protocol.prompt).toContain('button <variant> "Label"');
+    expect(protocol.prompt).not.toContain('form "Title"');
+    expect(protocol.catalog.components.text?.summary).toContain('visible copy');
+    expect(protocol.catalog.components.form).toBeUndefined();
+  });
+
+  it('validates generated ToonUI against the active configured catalog', () => {
+    const protocol = createToonProtocol({ components: ['text'] });
+    const document = parseToonUI(['text "Permitido"', 'button primary "No permitido" reply="No"'].join('\n'));
+
+    const result = validateToonUI(document, protocol.catalog);
+
+    expect(result.ok).toBe(false);
+    expect(result.errors).toContainEqual(expect.objectContaining({
+      code: 'INVALID_COMPONENT',
+      message: 'Component "button" is not enabled in the active ToonUI catalog.',
+    }));
+  });
+
+  it('rejects invalid configured catalog dependencies early', () => {
+    expect(() => createToonProtocol({ components: ['form'] })).toThrow('"form" requires "field", "button"');
   });
 
   it('creates chat-ready model messages for reply and submit interactions', () => {

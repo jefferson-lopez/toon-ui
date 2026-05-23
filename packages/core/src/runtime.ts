@@ -1,4 +1,4 @@
-import { TOON_CATALOG } from './catalog';
+import { TOON_CATALOG, createToonCatalog, type CreateToonCatalogOptions, type ToonActiveCatalog } from './catalog';
 import { createPrompt } from './prompts';
 import { parseToonUI } from './parser';
 import { validateToonUI } from './validator';
@@ -38,9 +38,11 @@ type SubmitPayloadWithOptionalNode = SubmitPayload & {
   };
 };
 
-export function createRules(): ToonRules {
+export function createRules(catalog: ToonActiveCatalog = TOON_CATALOG): ToonRules {
+  const componentKeys = Object.keys(catalog.components) as Array<(typeof OFFICIAL_COMPONENT_KEYS)[number]>;
+
   return {
-    components: OFFICIAL_COMPONENT_KEYS,
+    components: componentKeys,
     buttonVariants: BUTTON_VARIANTS,
     badgeVariants: BADGE_VARIANTS,
     alertVariants: ALERT_VARIANTS,
@@ -146,14 +148,19 @@ function createMessagesApi(): ToonMessagesApi {
   };
 }
 
-export function createToonProtocol(): ToonProtocol {
-  const rules = createRules();
+export interface CreateToonProtocolOptions extends CreateToonCatalogOptions {
+  catalog?: ToonActiveCatalog;
+}
+
+export function createToonProtocol(options: CreateToonProtocolOptions = {}): ToonProtocol {
+  const catalog = options.catalog ?? createToonCatalog({ components: options.components });
+  const rules = createRules(catalog);
   const messages = createMessagesApi();
 
   return {
-    prompt: createPrompt(rules),
+    prompt: createPrompt(rules, catalog),
     rules,
-    catalog: TOON_CATALOG,
+    catalog,
     events: {
       reply: createReplyEvent,
       submit: createSubmitEvent,
@@ -163,7 +170,10 @@ export function createToonProtocol(): ToonProtocol {
 }
 
 export function createToonCoreRuntime<TComponents extends ToonComponentRegistry = ToonComponentRegistry>(options: CreateToonUIOptions<TComponents> = {}): ToonRuntime<TComponents> {
-  const protocol = createToonProtocol();
+  const protocol = createToonProtocol({
+    catalog: options.catalog,
+    components: options.catalog ? undefined : Object.keys(options.components ?? {}) as Array<(typeof OFFICIAL_COMPONENT_KEYS)[number]>,
+  });
   return {
     components: (options.components ?? {}) as TComponents,
     ...protocol,

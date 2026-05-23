@@ -245,6 +245,7 @@ function parseLine(content: string, line: number, column: number): ToonNode {
       variant: (getVariantBeforeQuotedValue(content, 'confirm') ?? 'neutral') as ConfirmNode['variant'],
       title,
       description: getStringAttribute(content, 'description'),
+      trigger: getStringAttribute(content, 'trigger'),
       children: [],
       line,
       column,
@@ -315,25 +316,25 @@ function parseLine(content: string, line: number, column: number): ToonNode {
   if (content.startsWith('dialog ')) {
     const [title] = getQuotedValues(content);
     if (!title || !content.endsWith(':')) syntaxIssue('INVALID_SYNTAX', `Line ${line}: dialog requires a title and nested block.`, line, column);
-    return { type: 'dialog', title, children: [], line, column } satisfies DialogNode;
+    return { type: 'dialog', title, trigger: getStringAttribute(content, 'trigger'), children: [], line, column } satisfies DialogNode;
   }
 
   if (content.startsWith('sheet ')) {
     const [title] = getQuotedValues(content);
     if (!title || !content.endsWith(':')) syntaxIssue('INVALID_SYNTAX', `Line ${line}: sheet requires a title and nested block.`, line, column);
-    return { type: 'sheet', title, side: (getStringAttribute(content, 'side') ?? 'right') as SheetNode['side'], children: [], line, column } satisfies SheetNode;
+    return { type: 'sheet', title, trigger: getStringAttribute(content, 'trigger'), side: (getStringAttribute(content, 'side') ?? 'right') as SheetNode['side'], children: [], line, column } satisfies SheetNode;
   }
 
   if (content.startsWith('popover ')) {
     const [title] = getQuotedValues(content);
     if (!title || !content.endsWith(':')) syntaxIssue('INVALID_SYNTAX', `Line ${line}: popover requires a title and nested block.`, line, column);
-    return { type: 'popover', title, children: [], line, column } satisfies PopoverNode;
+    return { type: 'popover', title, trigger: getStringAttribute(content, 'trigger'), children: [], line, column } satisfies PopoverNode;
   }
 
   if (content.startsWith('tooltip ')) {
     const [text] = getQuotedValues(content);
     if (!text) syntaxIssue('MISSING_REQUIRED_FIELD', `Line ${line}: tooltip requires quoted text.`, line, column);
-    return { type: 'tooltip', text, line, column } satisfies TooltipNode;
+    return { type: 'tooltip', text, trigger: getStringAttribute(content, 'trigger'), line, column } satisfies TooltipNode;
   }
 
   if (content.startsWith('progress ')) {
@@ -385,7 +386,7 @@ function parseLine(content: string, line: number, column: number): ToonNode {
   if (content.startsWith('command ')) {
     const [title] = getQuotedValues(content);
     if (!title || !content.endsWith(':')) syntaxIssue('INVALID_SYNTAX', `Line ${line}: command requires a title and nested block.`, line, column);
-    return { type: 'command', title, children: [], line, column } satisfies CommandNode;
+    return { type: 'command', title, trigger: getStringAttribute(content, 'trigger'), children: [], line, column } satisfies CommandNode;
   }
 
   if (content.startsWith('action ')) {
@@ -409,6 +410,7 @@ function parseLine(content: string, line: number, column: number): ToonNode {
       type: 'chart',
       chartType: chartType as ChartNode['chartType'],
       title,
+      description: getStringAttribute(content, 'description'),
       xLabel: getStringAttribute(content, 'x'),
       yLabel: getStringAttribute(content, 'y'),
       children: [],

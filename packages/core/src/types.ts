@@ -9,6 +9,7 @@ import {
   TOON_FIELD_TYPES,
   TOON_SEPARATOR_ORIENTATIONS,
   TOON_SHEET_SIDES,
+  type ToonActiveCatalog,
   type ToonCatalog,
 } from './catalog';
 
@@ -105,6 +106,7 @@ export interface ConfirmNode extends BaseNode {
   variant: ConfirmVariant;
   title: string;
   description?: string;
+  trigger?: string;
   children: ToonNode[];
 }
 
@@ -176,12 +178,14 @@ export interface AccordionNode extends BaseNode {
 export interface DialogNode extends BaseNode {
   type: 'dialog';
   title: string;
+  trigger?: string;
   children: ToonNode[];
 }
 
 export interface SheetNode extends BaseNode {
   type: 'sheet';
   title: string;
+  trigger?: string;
   side: SheetSide;
   children: ToonNode[];
 }
@@ -189,12 +193,14 @@ export interface SheetNode extends BaseNode {
 export interface PopoverNode extends BaseNode {
   type: 'popover';
   title: string;
+  trigger?: string;
   children: ToonNode[];
 }
 
 export interface TooltipNode extends BaseNode {
   type: 'tooltip';
   text: string;
+  trigger?: string;
 }
 
 export interface ProgressNode extends BaseNode {
@@ -248,6 +254,7 @@ export interface MenuNode extends BaseNode {
 export interface CommandNode extends BaseNode {
   type: 'command';
   title: string;
+  trigger?: string;
   children: ActionNode[];
 }
 
@@ -267,6 +274,7 @@ export interface ChartNode extends BaseNode {
   type: 'chart';
   chartType: ChartType;
   title: string;
+  description?: string;
   xLabel?: string;
   yLabel?: string;
   children: ChartSeriesNode[];
@@ -425,7 +433,7 @@ export interface ToonMessagesApi {
 export interface ToonProtocol {
   prompt: string;
   rules: ToonRules;
-  catalog: ToonCatalog;
+  catalog: ToonActiveCatalog;
   events: ToonEventsApi;
   messages: ToonMessagesApi;
 }
@@ -434,6 +442,7 @@ export type ToonComponentRegistry = Partial<{ [K in keyof ToonNodeByType]: unkno
 
 export interface CreateToonUIOptions<TComponents extends ToonComponentRegistry = ToonComponentRegistry> {
   components?: TComponents;
+  catalog?: ToonActiveCatalog;
 }
 
 export interface ToonRuntime<TComponents extends ToonComponentRegistry = ToonComponentRegistry> extends ToonProtocol {
