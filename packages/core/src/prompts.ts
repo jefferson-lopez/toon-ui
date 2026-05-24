@@ -63,6 +63,8 @@ export function createSyntaxPrompt(catalog: PromptCatalog = TOON_CATALOG): strin
   lines.push('- Literal valid syntax example: item "Juan Pérez" description="juan@example.com":');
   lines.push('- Literal valid trigger example: confirm danger "Delete customer?" trigger="Review deletion":');
   lines.push('- list only accepts item children, and every item must end with : and contain at least one nested child node');
+  lines.push('- item is NEVER a one-line leaf node. Correct: item "Text" description="Displays visible text.": followed by an indented text/badge/button/etc child');
+  lines.push('- Incorrect: item "Text" description="Displays visible text." with no trailing colon and no nested child');
   lines.push('- For select, radio, combobox, and multiselect fields, put choices on the same field line as options="A|B|C"');
   lines.push('- NEVER emit option as a child node. ToonUI has no option component or option child syntax.');
   lines.push('- Correct: field category select "Category" options="Coffee|Tea|Chocolate" required');
@@ -78,6 +80,7 @@ export function createFallbackPrompt(): string {
     '- Use heading for hierarchy instead of inventing header, subtitle, or title props on random nodes.',
     '- If you need secondary information, use more text nodes instead of inventing props or components.',
     '- For card, form, confirm, item, empty, and chart, a short subtitle belongs in description="..." on the opening line.',
+    '- For item, description="..." does NOT replace nested content; item still requires a trailing colon and at least one indented child.',
     '- For confirm, dialog, sheet, popover, tooltip, and command, a short opener/launcher label belongs in trigger="..." on the opening line.',
     '- NEVER write [description="..."] literally. The brackets in docs mean the attribute is optional.',
     '- Use section only inside accordion, tab only inside tabs, action only inside menu/command, crumb only inside breadcrumb, series only inside chart, and point only inside series.',
@@ -113,6 +116,7 @@ export function createCompositionPrompt(): string {
     '- Use chart only when the user needs trend or comparison understanding; otherwise prefer table for precise values.',
     '- When asked for broad coverage, cover less-common official components too instead of repeating only form, confirm, table, and alert.',
     '- For strict components like alert, empty, progress, and pagination, prefer copying the canonical example shape exactly instead of improvising shorthand.',
+    '- For lists, prefer this exact shape: list "Title": then item "Entry" description="Details": then an indented text/badge/button child.',
   ].join('\n');
 }
 
@@ -134,6 +138,25 @@ export function createFormBestPracticesPrompt(): string {
     '- Use otp only for verification codes, not generic numeric input.',
     '- Group related fields in one form instead of scattering separate forms across the response.',
     '- A form should usually end with exactly one primary submit button and optional secondary reply buttons only when needed.',
+    '- When handling a ui_submit with missing or invalid fields, do NOT re-render already valid submitted fields unless the user explicitly needs to edit them.',
+    '- For validation recovery, render a smaller follow-up form containing only the missing or invalid fields.',
+    '- Preserve previously submitted valid values in conversation state and merge them with the next partial ui_submit before summarizing, confirming, or saving.',
+    '- If the follow-up form is partial, make that clear in the form title or description so the user understands only the remaining information is needed.',
+    '- Before saving a create or update flow, always show a confirmation step using the complete merged payload, not only the latest partial submit payload.',
+  ].join('\n');
+}
+
+export function createRecommendedActionsPrompt(): string {
+  return [
+    'Recommended action policy:',
+    '- Do NOT end with generic filler such as "If you need anything else..." when a contextual next action would be more useful.',
+    '- After completing a flow, suggest only actions that are grounded in the current conversation, the visible UI, or known available capabilities.',
+    '- Never invent operational actions that require unavailable tools, APIs, permissions, or backend capabilities.',
+    '- If an action may require a tool or capability that is not known to be available, phrase it as a safe conversational request, not as an executable action.',
+    '- Prefer recommended actions that naturally follow from the completed task, such as reviewing the created record, creating another similar record, editing the just-submitted details, or returning to a relevant list only when those actions are supported by the current UI/capabilities.',
+    '- If no grounded next action exists, keep the closing brief and do not fabricate recommendations.',
+    '- Recommended actions should be rendered as ToonUI buttons, menu, command, card, or confirm only when the action is actually available in the current interaction contract.',
+    '- Dangerous or destructive actions, such as delete, must not be suggested unless the user asked for them or the capability is explicitly known and appropriate; if used, they must go through confirm danger.',
   ].join('\n');
 }
 
@@ -178,6 +201,8 @@ export function createSelfCheckPrompt(): string {
     '- If you use trigger on confirm, dialog, sheet, popover, or command, keep the trailing colon: confirm warning "Title" trigger="Open":',
     '- NEVER emit square brackets such as [description="..."] in final ToonUI output',
     '- For list, every direct child must be item, and every item must use the full container form with : plus nested children',
+    '- NEVER emit item "Title" description="..." as a one-line list row; description is only metadata, not the required child content.',
+    '- A valid list item shape is: item "Title" description="...": followed by an indented child such as text "Details"',
     '- empty always needs: quoted title + trailing colon + nested children',
     '- progress always needs: quoted label + value=<number> + max=<number>',
     '- pagination always needs: page=<number> + totalPages=<number>',
@@ -218,6 +243,8 @@ export function createPrompt(rules: ToonRules, catalog: PromptCatalog = TOON_CAT
     createCompositionPrompt(),
     '',
     createFormBestPracticesPrompt(),
+    '',
+    createRecommendedActionsPrompt(),
     '',
     createFallbackPrompt(),
     '',

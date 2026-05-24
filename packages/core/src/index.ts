@@ -13,6 +13,7 @@ export {
   createSafetyPrompt,
   createCompositionPrompt,
   createFormBestPracticesPrompt,
+  createRecommendedActionsPrompt,
   createDecisionPrompt,
   createSelfCheckPrompt,
   createExamplesPrompt,

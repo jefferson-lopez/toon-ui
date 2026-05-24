@@ -9,8 +9,10 @@ import {
   createFallbackPrompt,
   createSelfCheckPrompt,
   createDecisionPrompt,
+  createRecommendedActionsPrompt,
   createExamplesPrompt,
   createCompositionPrompt,
+  createFormBestPracticesPrompt,
   createToonCoreRuntime,
   createToonProtocol,
   extractToonBlocks,
@@ -129,16 +131,46 @@ describe('toon core', () => {
     expect(syntaxPrompt).toContain('confirm, dialog, sheet, popover, tooltip, and command MAY include trigger="..."');
     expect(syntaxPrompt).toContain('Literal valid trigger example: confirm danger "Delete customer?" trigger="Review deletion":');
     expect(syntaxPrompt).toContain('list only accepts item children');
+    expect(syntaxPrompt).toContain('item is NEVER a one-line leaf node');
+    expect(syntaxPrompt).toContain('Incorrect: item "Text" description="Displays visible text."');
     expect(syntaxPrompt).toContain('NEVER emit option as a child node');
     expect(syntaxPrompt).toContain('field category select "Category" options="Coffee|Tea|Chocolate" required');
     expect(fallbackPrompt).toContain('NEVER write [description="..."] literally.');
+    expect(fallbackPrompt).toContain('description="..." does NOT replace nested content');
     expect(fallbackPrompt).toContain('a short opener/launcher label belongs in trigger="..."');
     expect(selfCheckPrompt).toContain('NEVER emit square brackets such as [description="..."] in final ToonUI output');
     expect(selfCheckPrompt).toContain('chart bar "Sales" description="Weekly revenue":');
     expect(selfCheckPrompt).toContain('confirm, dialog, sheet, popover, tooltip, and command may use trigger="..."');
     expect(selfCheckPrompt).toContain('select/radio/combobox/multiselect options syntax is exactly');
     expect(selfCheckPrompt).toContain('There is no option node');
+    expect(selfCheckPrompt).toContain('NEVER emit item "Title" description="..." as a one-line list row');
+    expect(selfCheckPrompt).toContain('A valid list item shape is: item "Title" description="...":');
     expect(selfCheckPrompt).toContain('If the request asks for all or exhaustive coverage');
+  });
+
+  it('guides validation recovery toward partial forms with merged state', () => {
+    const formPrompt = createFormBestPracticesPrompt();
+    const fullPrompt = createToonCoreRuntime().prompt;
+
+    expect(formPrompt).toContain('do NOT re-render already valid submitted fields');
+    expect(formPrompt).toContain('follow-up form containing only the missing or invalid fields');
+    expect(formPrompt).toContain('Preserve previously submitted valid values in conversation state');
+    expect(formPrompt).toContain('merge them with the next partial ui_submit');
+    expect(formPrompt).toContain('complete merged payload');
+    expect(fullPrompt).toContain('When handling a ui_submit with missing or invalid fields');
+  });
+
+  it('discourages generic closings and ungrounded recommended actions', () => {
+    const recommendedActionsPrompt = createRecommendedActionsPrompt();
+    const fullPrompt = createToonCoreRuntime().prompt;
+
+    expect(recommendedActionsPrompt).toContain('Do NOT end with generic filler');
+    expect(recommendedActionsPrompt).toContain('known available capabilities');
+    expect(recommendedActionsPrompt).toContain('Never invent operational actions');
+    expect(recommendedActionsPrompt).toContain('not as an executable action');
+    expect(recommendedActionsPrompt).toContain('Dangerous or destructive actions');
+    expect(recommendedActionsPrompt).toContain('confirm danger');
+    expect(fullPrompt).toContain('Recommended action policy:');
   });
 
   it('pushes the model toward complete and less repetitive coverage', () => {
